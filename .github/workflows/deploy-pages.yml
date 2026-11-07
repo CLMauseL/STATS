@@ -1,4 +1,5 @@
 name: Deploy SwissCraft STATS website
+# Re-trigger deployment after Pages activation
 
 on:
   push:
