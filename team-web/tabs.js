@@ -1,5 +1,5 @@
-import {minecraftNames} from './minecraft-names.js?v=live-stats-fix';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=live-stats-fix';
+import {minecraftNames} from './minecraft-names.js?v=clean-block-names';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=clean-block-names';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -64,7 +64,7 @@ function renderAllStats(){
   const body=node('tbody');
   for(const entry of filtered.filter(e=>cards.slice(allState.page*size,(allState.page+1)*size).includes(e.stat))){
     const type=entry.stat.split('/')[0],display=minecraftDisplay(entry.stat,entry.value);
-    const tr=node('tr');tr.title=entry.stat;const category=node('td'),pill=node('span',labels[type]||type,'stat-category');category.append(pill);const name=node('td'),title=node('strong',statName(entry.stat)),id=node('small',entry.stat.split('/')[1]);name.append(title,id);tr.append(category,name,node('td',entry.player),node('td',format(display.value)),node('td',display.unit));body.append(tr);
+    const tr=node('tr');tr.title=entry.stat;const category=node('td'),pill=node('span',labels[type]||type,'stat-category');category.append(pill);const name=node('td'),title=node('strong',statName(entry.stat)),id=node('small',entry.stat.split('/')[1].replace(/^minecraft:/,''));name.append(title,id);tr.append(category,name,node('td',entry.player),node('td',format(display.value)),node('td',display.unit));body.append(tr);
    }table.append(body);
   const grid=node('div',undefined,'stat-card-grid');
   for(const stat of cards.slice(allState.page*size,(allState.page+1)*size)){
@@ -126,6 +126,7 @@ function renderFood(players){
   if(!entries.length)root.append(node('p','Noch keine historischen Lebensmittel-Zähler für diese Auswahl übertragen.','empty'));
 }
 
+const blockName=id=>minecraftNames['block.'+id.replace(':','.')]||id.replace(/^minecraft:/,'').replaceAll('_',' ').replace(/\b[a-z]/g,c=>c.toUpperCase());
 const blockState={type:'minecraft:mined',player:'*',item:'*'};
 function renderBlocks(){
  const root=$('stats-blocks');root.replaceChildren(node('h2','Welche Blöcke werden am meisten gesetzt oder abgebaut?'));
@@ -137,13 +138,13 @@ function renderBlocks(){
  blockState.type=select('Block-Aktion',[['minecraft:mined','Abgebaut · gesamte Historie'],['minecraft:used','Block-Items benutzt · gesamte Historie'],['holzkopf:placed','Platzierungen · seit Mod 0.4.3']],blockState.type,v=>{blockState.type=v;blockState.item='*'});
  blockState.player=select('Blöcke nach Spieler filtern',[['*','Alle Spieler'],...[...new Set(entries.map(e=>e.player))].sort().map(p=>[p,p])],blockState.player,v=>selectPlayer(v));
  const blocks=entries.filter(e=>e.stat.startsWith(blockState.type+'/')&&(blockState.type!=='minecraft:used'||Object.hasOwn(minecraftNames,'block.'+e.stat.split('/')[1].replace(':','.'))));
- blockState.item=select('Block auswählen',[['*','Alle Blöcke'],...[...new Set(blocks.map(e=>e.stat.split('/')[1]))].sort().map(id=>[id,id])],blockState.item,v=>blockState.item=v);
+ blockState.item=select('Block auswählen',[['*','Alle Blöcke'],...[...new Set(blocks.map(e=>e.stat.split('/')[1]))].sort((a,b)=>blockName(a).localeCompare(blockName(b))).map(id=>[id,blockName(id)])],blockState.item,v=>blockState.item=v);
  const filtered=blocks.filter(e=>(blockState.player==='*'||e.player===blockState.player)&&(blockState.item==='*'||e.stat.split('/')[1]===blockState.item));
  const totals=new Map();for(const e of filtered){const id=e.stat.split('/')[1];totals.set(id,(totals.get(id)||0)+e.value)}
  const best=[...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0];
- root.append(node('p',best?'Häufigster Block dieser Auswahl: '+best[0]+' · '+format(best[1])+' Vorgänge':'Noch keine Blockdaten für diese Auswahl. Mod 0.4.3 erfasst neue Platzierungen.','note'));
- const t=node('table'),h=node('tr');for(const v of ['Rang','Block / ID','Spieler',blockState.type==='holzkopf:placed'?'Erfasst gesetzt':blockState.type==='minecraft:mined'?'Historisch abgebaut':'Historisch benutzt'])h.append(node('th',v));const head=node('thead');head.append(h);t.append(head);const body=node('tbody');
- filtered.sort((a,b)=>b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),e.stat.split('/')[1],e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
+ root.append(node('p',best?'Häufigster Block dieser Auswahl: '+blockName(best[0])+' · '+format(best[1])+' Vorgänge':'Noch keine Blockdaten für diese Auswahl. Mod 0.4.3 erfasst neue Platzierungen.','note'));
+ const t=node('table'),h=node('tr');for(const v of ['Rang','Block','Spieler',blockState.type==='holzkopf:placed'?'Erfasst gesetzt':blockState.type==='minecraft:mined'?'Historisch abgebaut':'Historisch benutzt'])h.append(node('th',v));const head=node('thead');head.append(h);t.append(head);const body=node('tbody');
+ filtered.sort((a,b)=>b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),blockName(e.stat.split('/')[1]),e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
 }
 
 
