@@ -118,3 +118,14 @@ export function statisticRanking(rows, stat) {
  let previous,rank=0;
  return entries.map((entry,i)=>{if(entry.value!==previous){rank=i+1;previous=entry.value}return {...entry,rank}});
 }
+
+export function generalCategory(stat){
+ const id=stat.split('/').pop().split(':').pop();
+ if(['play_time','total_world_time','time_since_death','time_since_rest','sneak_time','leave_game'].includes(id))return 'time';
+ if(id.endsWith('_one_cm')||id==='jump')return 'movement';
+ if(id.startsWith('damage_')||['deaths','mob_kills','player_kills'].includes(id))return 'combat';
+ if(['animals_bred','fish_caught'].includes(id))return 'animals';
+ if(id==='eat_cake_slice')return 'food';
+ if(/^(interact_with_|inspect_|open_|play_|clean_|fill_|use_|trigger_|tune_|aviate_|enchant_|sleep_|bell_|raid_|target_|pot_|traded_|talked_|drop$)/.test(id))return 'interactions';
+ return 'other';
+}

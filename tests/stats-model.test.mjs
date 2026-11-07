@@ -86,3 +86,8 @@ test('every statistic has a numeric ranking, shared ranks and latest server tota
  assert.equal(ranks.filter(e=>e.player==='Cara')[0].rank,3);
  assert.deepEqual(statisticRanking([r('Alice',1,10)],'minecraft:custom/minecraft:deaths'),[]);
 });
+
+test('general subcategories group movement, time, combat and interactions logically',async()=>{
+ const {generalCategory}=await import('../team-web/stats-model.js');
+ for(const [id,group] of [['walk_one_cm','movement'],['jump','movement'],['sneak_time','time'],['time_since_death','time'],['damage_dealt','combat'],['deaths','combat'],['animals_bred','animals'],['fish_caught','animals'],['eat_cake_slice','food'],['open_chest','interactions'],['traded_with_villager','interactions'],['unknown_future_stat','other']])assert.equal(generalCategory('minecraft:custom/minecraft:'+id),group);
+});
