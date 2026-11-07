@@ -48,8 +48,15 @@ export function vanillaRows(rows) {
     const key=JSON.stringify([row.player,row.server]);
     if(!latest.has(key)||latest.get(key).gameStatsAt<row.gameStatsAt)latest.set(key,{...row,vanillaStats:stats});
   }
+  // Placements are observed daily, unlike cumulative vanilla counters.
+  const placedDays=new Map();
+  for(const row of rows.filter(isMultiplayerDay)) {
+    const stats=validVanillaStats(row.vanillaStats);if(!stats)continue;
+    const key=JSON.stringify([row.player,row.server,row.date]);
+    if(!placedDays.has(key)||(placedDays.get(key).gameStatsAt||0)<=(row.gameStatsAt||0))placedDays.set(key,{...row,vanillaStats:stats});
+  }
   const totals=new Map();
-  for(const row of latest.values())for(const [stat,value] of Object.entries(row.vanillaStats)){
+  for(const row of [...latest.values(),...placedDays.values()].map((r,i)=>({...r,vanillaStats:Object.fromEntries(Object.entries(r.vanillaStats).filter(([k])=>i<latest.size?!k.startsWith('holzkopf:placed/'):k.startsWith('holzkopf:placed/')))})))for(const [stat,value] of Object.entries(row.vanillaStats)){
     const key=JSON.stringify([row.player,stat]);
     if(!totals.has(key))totals.set(key,{player:row.player,stat,value:0});
     totals.get(key).value+=value;

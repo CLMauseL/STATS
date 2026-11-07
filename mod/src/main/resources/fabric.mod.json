@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "farmingtracker",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "name": "SwissCraft Farming Tracker",
   "description": "Client-only Minecraft 26.2 farming + lifetime active/AFK statistics for weekly team reports",
   "environment": "client",
