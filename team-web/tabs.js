@@ -1,5 +1,5 @@
-import {minecraftNames} from './minecraft-names.js?v=easy-login-050';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=easy-login-050';
+import {minecraftNames} from './minecraft-names.js?v=ranking-groups';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=ranking-groups';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -72,7 +72,7 @@ function renderAllStats(){
    const card=node('article',undefined,'stat-card'),type=stat.split('/')[0];card.append(node('span',labels[type]||type,'stat-card-kicker'),node('h3',statName(stat)));
    const value=node('div',undefined,'stat-card-value');value.append(node('strong',display?format(display.value):'–'),node('span',display?.unit||'Unbekannt'));card.append(value);
    card.append(node('p',allState.player==='*'?(selected?'Spitzenreiter: '+ranking.filter(e=>e.rank===1).map(e=>e.player).join(' · '):'Noch keine Daten'):(selected?selected.player+' · Platz '+selected.rank+' im Team':'Noch nicht übertragen'),'stat-card-person'));
-   const compare=node('button','Rangliste ansehen →','button alt');compare.onclick=()=>{rankingState.stat=stat;rankingState.search='';rankingState.player=allState.player;renderCategories();activate(buttons.find(b=>b.dataset.tab==='rankings'))};card.append(compare);grid.append(card);
+   const compare=node('button','Rangliste ansehen →','button alt');compare.onclick=()=>{rankingState.stat=stat;rankingState.group=rankingGroupOf(stat);rankingState.search='';rankingState.player=allState.player;renderCategories();activate(buttons.find(b=>b.dataset.tab==='rankings'))};card.append(compare);grid.append(card);
   }
   const details=node('details',undefined,'stat-details');details.append(node('summary','Werte als Detailtabelle anzeigen'),table);allTable.replaceChildren(grid,details);
   if(!cards.length)allTable.prepend(node('p','Für diese Unterkategorie und Auswahl wurden noch keine Statistiken übertragen.','empty'));
@@ -148,19 +148,24 @@ function renderBlocks(){
 }
 
 
-const rankingState={stat:'minecraft:custom/minecraft:deaths',player:'*',search:''};
+const rankingGroupOf=stat=>stat.startsWith('minecraft:custom/')?'general:'+generalCategory(stat):stat.split('/')[0];
+const rankingGroups=[...generalGroups.filter(([id])=>id!=='*').map(([id,label])=>['general:'+id,'Allgemein · '+label]),['minecraft:mined','Items · Abgebaut'],['minecraft:used','Items · Benutzt'],['minecraft:crafted','Items · Hergestellt'],['minecraft:broken','Items · Zerbrochen'],['minecraft:picked_up','Items · Aufgesammelt'],['minecraft:dropped','Items · Weggeworfen'],['minecraft:killed','Mobs · Besiegt'],['minecraft:killed_by','Mobs · Getötet durch'],['holzkopf:placed','Blöcke · Platzierungen']];
+const rankingState={stat:'minecraft:custom/minecraft:deaths',player:'*',search:'',group:'general:combat'};
 function renderStatisticRanking(root){
  root.append(node('h3','Rangliste für jede Statistik'));
- root.append(node('p','Statistik auswählen und alle Spieler vergleichen. Einzelne Spieler lassen sich mit ihrem Rang im gesamten Team anzeigen. Fehlende Werte bleiben unbekannt.'));
+ root.append(node('p','Zuerst einen Bereich auswählen. Der gewählte Einzelwert lässt sich darunter ändern; die Rangliste vergleicht immer dieselbe Statistik.'));
  const toolbar=node('div',undefined,'stat-filters'),search=node('input');search.type='search';search.placeholder='Statistik suchen …';search.setAttribute('aria-label','Ranglisten-Statistik suchen');search.value=rankingState.search;
  const stats=node('select');stats.setAttribute('aria-label','Statistik für Rangliste auswählen');
  const person=node('select');person.setAttribute('aria-label','Rangliste nach Spieler filtern');
- const statLabel=node('label','Statistik: ');statLabel.append(stats);const playerLabel=node('label','Spieler: ');playerLabel.append(person);toolbar.append(search,statLabel,playerLabel);root.append(toolbar);
+ const group=node('select');group.setAttribute('aria-label','Ranglisten-Unterkategorie');for(const [id,label] of rankingGroups){const o=node('option',label);o.value=id;group.append(o)}group.value=rankingState.group;
+ const groupLabel=node('label','Statistikbereich: ');groupLabel.append(group);const playerLabel=node('label','Spieler: ');playerLabel.append(person);toolbar.append(groupLabel,playerLabel);toolbar.classList.add('ranking-group-filters');root.append(toolbar);
+ const detail=node('details',undefined,'stat-details'),detailSummary=node('summary','Einzelwert ändern'),detailControls=node('div',undefined,'nav'),statLabel=node('label','Einzelstatistik: ');statLabel.append(stats);detailControls.append(search,statLabel);detail.append(detailSummary,detailControls);root.append(detail);
  const all=vanillaRows(window.statsCloud.getRows());
  for(const [id,label] of [['*','Alle Spieler'],...[...new Set(window.statsCloud.getRows().map(r=>r.player))].sort().map(p=>[p,p])]){const o=node('option',label);o.value=id;person.append(o)}
  person.value=[...person.options].some(o=>o.value===rankingState.player)?rankingState.player:'*';rankingState.player=person.value;
  const spotlight=node('div',undefined,'stat-spotlight'),count=node('p',undefined,'note'),results=node('div',undefined,'ranking-results');root.append(spotlight,count,results);
  const draw=()=>{
+  detailSummary.textContent='Einzelwert: '+(rankingState.stat?statName(rankingState.stat):'Noch keine Daten')+' · ändern';
   const stat=rankingState.stat,ranked=statisticRanking(window.statsCloud.getRows(),stat);
   const filtered=ranked.filter(e=>rankingState.player==='*'||e.player===rankingState.player);
   spotlight.replaceChildren();const leader=ranked[0],top=leader?minecraftDisplay(leader.stat,leader.value):null;
@@ -179,12 +184,12 @@ function renderStatisticRanking(root){
  };
  const fill=()=>{
   const q=rankingState.search.trim().toLowerCase();
-  const ids=[...new Set(all.map(e=>e.stat))].filter(id=>(id+' '+statName(id)+' '+(labels[id.split('/')[0]]||'')).toLowerCase().includes(q)).sort((a,b)=>statName(a).localeCompare(statName(b))||a.localeCompare(b));
+  const ids=[...new Set(all.map(e=>e.stat))].filter(id=>rankingGroupOf(id)===rankingState.group).filter(id=>(id+' '+statName(id)+' '+(labels[id.split('/')[0]]||'')).toLowerCase().includes(q)).sort((a,b)=>statName(a).localeCompare(statName(b))||a.localeCompare(b));
   stats.replaceChildren();for(const id of ids){const o=node('option',(labels[id.split('/')[0]]||id.split('/')[0])+' · '+statName(id));o.value=id;stats.append(o)}
   if(ids.includes(rankingState.stat))stats.value=rankingState.stat;else rankingState.stat=ids[0]||'';
   draw();
  };
- search.oninput=()=>{rankingState.search=search.value;fill()};stats.onchange=()=>{rankingState.stat=stats.value;draw()};person.onchange=()=>selectPlayer(person.value);fill();
+ group.onchange=()=>{rankingState.group=group.value;rankingState.search='';search.value='';fill()};search.oninput=()=>{rankingState.search=search.value;fill()};stats.onchange=()=>{rankingState.stat=stats.value;draw()};person.onchange=()=>selectPlayer(person.value);fill();
 }
 
 function renderCategories(){
