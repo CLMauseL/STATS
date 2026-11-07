@@ -55,3 +55,10 @@ test('observed zero differs from old unknown food; singleplayer excluded',()=>{
  assert.equal(result.find(p=>p.player==='Old').known,false);assert.equal(result.find(p=>p.player==='New').known,true);assert.equal(result.some(p=>p.player==='Local'),false);
  assert.equal(validConsumedFood({'minecraft:bread':-1}),null);assert.equal(validConsumedFood({'minecraft:bread':1.5}),null);
 });
+
+test('daily placements sum days while vanilla cumulative counters use latest snapshot',()=>{
+ const r=(date,at,placed,mined,server='remote')=>({player:'Alice',server,date,gameStatsAt:at,vanillaStats:{'holzkopf:placed/minecraft:oak_planks':placed,'minecraft:mined/minecraft:stone':mined}});
+ const values=vanillaRows([r('2026-11-07',1,2,20),r('2026-11-07',2,5,25),r('2026-11-08',3,3,30),r('2026-11-08',4,999,999,'singleplayer')]);
+ assert.equal(values.find(x=>x.stat.startsWith('holzkopf:placed/')).value,8);
+ assert.equal(values.find(x=>x.stat.startsWith('minecraft:mined/')).value,30);
+});

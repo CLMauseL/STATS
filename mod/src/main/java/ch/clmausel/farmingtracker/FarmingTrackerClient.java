@@ -79,6 +79,18 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         instance.lifetime.save(false);
     }
 
+    public static void placedBlock(String block) {
+        var client = Minecraft.getInstance();
+        if (instance == null || client.player == null
+            || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) return;
+        instance.lifetime.ensureDay(client);
+        var day = instance.lifetime.day;
+        if (day.placedBlocks == null) day.placedBlocks = new TreeMap<>();
+        day.placedBlocks.merge(block, 1L, Long::sum);
+        instance.lifetime.blockActivity = true;
+        instance.lifetime.save(false);
+    }
+
     private void tick(Minecraft client) {
         GameStatistics.tick(client);
         if (client.player == null || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) {
@@ -329,6 +341,10 @@ public final class FarmingTrackerClient implements ClientModInitializer {
                 // Serialize a detached snapshot: a failed disk write must never mutate accounting.
                 Daily saved = JSON.fromJson(JSON.toJson(day), Daily.class);
                 Accounting.Totals totals = Accounting.includingIdle(day.workMs, day.afkMs, finalizing ? 0 : pendingIdleMs);
+                if (saved.placedBlocks != null) {
+                    if (saved.vanillaStats == null) saved.vanillaStats = new TreeMap<>();
+                    saved.placedBlocks.forEach((id, count) -> saved.vanillaStats.put("holzkopf:placed/" + id, count));
+                }
                 saved.workMs = totals.workMs(); saved.afkMs = totals.afkMs();
                 Path tmp = day.file.resolveSibling(day.file.getFileName() + ".tmp");
                 Files.writeString(tmp, JSON.toJson(saved));
@@ -347,6 +363,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         // Cumulative vanilla server totals. Keep separate from day-only counters.
         Map<String, Long> gameStats;
         Map<String, Long> vanillaStats;
+        Map<String, Long> placedBlocks;
         // Daily observed completed meals, not cumulative ITEM_USED statistics.
         Map<String, Long> foodConsumed;
         long gameStatsAt;

@@ -1,19 +1,21 @@
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,consumptionTotals} from './stats-model.js?v=0.4.2';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,consumptionTotals} from './stats-model.js?v=0.4.3';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
-const allState={search:'',group:'*',player:'*',page:0};
-const labels={'minecraft:custom':'Allgemein','minecraft:mined':'Blöcke abgebaut','minecraft:crafted':'Items hergestellt','minecraft:used':'Items benutzt','minecraft:broken':'Werkzeuge zerbrochen','minecraft:picked_up':'Items aufgesammelt','minecraft:dropped':'Items weggeworfen','minecraft:killed':'Mobs besiegt','minecraft:killed_by':'Getötet durch'};
-let allToolbar,allSearch,allGroup,allPlayer,allTable,allCount,allPrev,allNext;
+const allState={search:'',group:'*',player:'*',page:0,sort:'value'};
+const labels={'holzkopf:placed':'Blöcke gesetzt','minecraft:custom':'Allgemein','minecraft:mined':'Blöcke abgebaut','minecraft:crafted':'Items hergestellt','minecraft:used':'Items benutzt','minecraft:broken':'Werkzeuge zerbrochen','minecraft:picked_up':'Items aufgesammelt','minecraft:dropped':'Items weggeworfen','minecraft:killed':'Mobs besiegt','minecraft:killed_by':'Getötet durch'};
+let allToolbar,allSearch,allGroup,allPlayer,allTable,allCount,allPrev,allNext,allSort;
 function renderAllStats(){
   const root=$('stats-all');
   if(!allToolbar){
     root.append(node('h2','Alle Minecraft-Statistiken'));
-    root.append(node('p','Alle vom Multiplayer-Server gelieferten Zähler. Suche nach Statistik-, Block-, Item- oder Mob-ID. Fehlende Zähler sind noch nicht übertragen; ein fehlender Eintrag bedeutet nicht automatisch null.'));
+    root.append(node('p','Alle vom Multiplayer-Server gelieferten Zähler sowie täglich erfasste Platzierungen seit Mod 0.4.3. Suche nach Statistik-, Block-, Item- oder Mob-ID. Fehlende Zähler sind noch nicht übertragen; ein fehlender Eintrag bedeutet nicht automatisch null.'));
     allToolbar=node('div',undefined,'nav');allSearch=node('input');allSearch.type='search';allSearch.placeholder='Suchen, z. B. diamond, jump, damage …';allSearch.setAttribute('aria-label','Statistiken durchsuchen');
     allGroup=node('select');allGroup.setAttribute('aria-label','Statistikkategorie');
     allPlayer=node('select');allPlayer.setAttribute('aria-label','Statistiken nach Spieler filtern');
-    allToolbar.append(allSearch,allGroup,allPlayer);root.append(allToolbar);
+    allSort=node('select');allSort.setAttribute('aria-label','Statistiken sortieren');for(const [value,label] of [['value','Höchster Wert zuerst'],['name','Nach Statistik / ID']]){const o=node('option',label);o.value=value;allSort.append(o)}
+    allSort.onchange=()=>{allState.sort=allSort.value;allState.page=0;renderAllStats()};
+    allToolbar.append(allSearch,allGroup,allPlayer,allSort);root.append(allToolbar);
     allCount=node('p',undefined,'note');allTable=node('div',undefined,'scroll');root.append(allCount,allTable);
     const pager=node('div',undefined,'nav');allPrev=node('button','← Zurück','button alt');allNext=node('button','Weiter →','button alt');pager.append(allPrev,allNext);root.append(pager);
     allSearch.oninput=()=>{allState.search=allSearch.value;allState.page=0;renderAllStats()};
@@ -30,7 +32,7 @@ function renderAllStats(){
   const filtered=entries.filter(x=>(allState.group==='*'||x.stat.split('/')[0]===allState.group)
     &&(allState.player==='*'||x.player===allState.player)
     &&(!search||(x.stat+' '+x.player+' '+(labels[x.stat.split('/')[0]]||'')).toLowerCase().includes(search)))
-    .sort((a,b)=>a.stat.localeCompare(b.stat)||b.value-a.value||a.player.localeCompare(b.player));
+    .sort((a,b)=>allState.sort==='value'?b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player):a.stat.localeCompare(b.stat)||b.value-a.value||a.player.localeCompare(b.player));
   const size=100;allState.page=Math.max(0,Math.min(allState.page,Math.ceil(filtered.length/size)-1));
   const table=node('table'),head=node('thead'),h=node('tr');for(const title of ['Kategorie','Statistik / ID','Spieler','Wert','Einheit'])h.append(node('th',title));head.append(h);table.append(head);
   const body=node('tbody');
@@ -39,7 +41,7 @@ function renderAllStats(){
     const tr=node('tr');for(const v of [labels[type]||type,id,entry.player,format(distance?entry.value/100:entry.value),distance?'Blöcke':'Minecraft-Zähler'])tr.append(node('td',v));body.append(tr);
   }table.append(body);allTable.replaceChildren(table);
   allPrev.disabled=allState.page===0;allNext.disabled=(allState.page+1)*size>=filtered.length;
-  allCount.textContent=entries.length?`${window.statsCloud.sourceLabel()} · ${filtered.length} Treffer · Seite ${allState.page+1} / ${Math.max(1,Math.ceil(filtered.length/size))}`:'Noch keine vollständigen Minecraft-Statistiken übertragen. Mod 0.4.2 installieren und einem Multiplayer-Server beitreten.';
+  allCount.textContent=entries.length?`${window.statsCloud.sourceLabel()} · ${filtered.length} Treffer · Seite ${allState.page+1} / ${Math.max(1,Math.ceil(filtered.length/size))}`:'Noch keine vollständigen Minecraft-Statistiken übertragen. Mod 0.4.3 installieren und einem Multiplayer-Server beitreten.';
 }
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 const categories={
@@ -86,8 +88,30 @@ function renderFood(players){
   t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
   if(!entries.length)root.append(node('p','Noch keine abgeschlossenen Essvorgänge für diese Auswahl erfasst. Alte Daten ohne Verzehr-Aufzeichnung bleiben unbekannt.','empty'));
 }
+
+const blockState={type:'holzkopf:placed',player:'*',item:'*'};
+function renderBlocks(){
+ const root=$('stats-blocks');root.replaceChildren(node('h2','Welche Blöcke werden am meisten gesetzt oder abgebaut?'));
+ root.append(node('p','Gesetzte Blöcke: erfolgreiche, vom Client gemeldete Platzierungen seit Mod 0.4.3, ohne rückwirkende Schätzung aus Item-Nutzung. Server können Platzierungen nachträglich ablehnen. Abgebaute Blöcke: Minecraft-Gesamtstände des Servers. Gezählt werden Platzierungsvorgänge, auch bei mehrteiligen Blöcken.','note'));
+ root.append(node('p',window.statsCloud.sourceLabel(),'note'));
+ const entries=vanillaRows(window.statsCloud.getRows());
+ const toolbar=node('div',undefined,'nav');root.append(toolbar);
+ const select=(label,options,value,change)=>{const e=node('select');e.setAttribute('aria-label',label);for(const [v,l] of options){const o=node('option',l);o.value=v;e.append(o)}e.value=options.some(([v])=>v===value)?value:options[0][0];e.onchange=()=>{change(e.value);renderBlocks()};toolbar.append(e);return e.value};
+ blockState.type=select('Block-Aktion',[['holzkopf:placed','Blöcke gesetzt'],['minecraft:mined','Blöcke abgebaut']],blockState.type,v=>{blockState.type=v;blockState.item='*'});
+ blockState.player=select('Blöcke nach Spieler filtern',[['*','Alle Spieler'],...[...new Set(entries.map(e=>e.player))].sort().map(p=>[p,p])],blockState.player,v=>blockState.player=v);
+ const blocks=entries.filter(e=>e.stat.startsWith(blockState.type+'/'));
+ blockState.item=select('Block auswählen',[['*','Alle Blöcke'],...[...new Set(blocks.map(e=>e.stat.split('/')[1]))].sort().map(id=>[id,id])],blockState.item,v=>blockState.item=v);
+ const filtered=blocks.filter(e=>(blockState.player==='*'||e.player===blockState.player)&&(blockState.item==='*'||e.stat.split('/')[1]===blockState.item));
+ const totals=new Map();for(const e of filtered){const id=e.stat.split('/')[1];totals.set(id,(totals.get(id)||0)+e.value)}
+ const best=[...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0];
+ root.append(node('p',best?'Häufigster Block dieser Auswahl: '+best[0]+' · '+format(best[1])+' Vorgänge':'Noch keine Blockdaten für diese Auswahl. Mod 0.4.3 erfasst neue Platzierungen.','note'));
+ const t=node('table'),h=node('tr');for(const v of ['Rang','Block / ID','Spieler',blockState.type==='holzkopf:placed'?'Gesetzt':'Abgebaut'])h.append(node('th',v));const head=node('thead');head.append(h);t.append(head);const body=node('tbody');
+ filtered.sort((a,b)=>b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),e.stat.split('/')[1],e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
+}
+
 function renderCategories(){
   renderAllStats();
+  renderBlocks();
   const rows=window.statsCloud.getRows(),players=playerTotals(rows),known=players.filter(p=>p.known);
   const foodPlayers=consumptionTotals(rows).map(p=>({...p,stats:p.items}));
   renderFood(foodPlayers);
@@ -100,7 +124,7 @@ function renderCategories(){
     const scroll=node('div',undefined,'scroll');target.append(scroll);
     const draw=()=>scroll.replaceChildren(table(players,category.columns,category.columns[Number(select.value)][1]));
     select.onchange=()=>{sortSelection[id]=Number(select.value);draw()};draw();
-    if(!known.length)target.append(node('p','Noch keine Minecraft-Zähler vorhanden. Mod 0.4.2 installieren, dem Server beitreten und die erste Synchronisierung abwarten. Alte Daten bleiben „–“, nicht null Ereignisse.','empty'));
+    if(!known.length)target.append(node('p','Noch keine Minecraft-Zähler vorhanden. Mod 0.4.3 installieren, dem Server beitreten und die erste Synchronisierung abwarten. Alte Daten bleiben „–“, nicht null Ereignisse.','empty'));
   }
   const target=$('stats-rankings');target.replaceChildren(node('h2','Die Holzkopfarmy-Rekorde'));
   const grid=node('div',undefined,'record-grid');
@@ -113,12 +137,12 @@ function renderCategories(){
     card.append(node('span',unit));grid.append(card);
   }target.append(grid);
   if(known.length){const at=Math.max(...known.map(p=>p.sampledAt));$('gameStatsStatus').textContent=`${window.statsCloud.sourceLabel()} · ${known.length} Spieler mit Minecraft-Zählern · letzter Stand ${new Date(at).toLocaleString('de-CH')}`;}
-  else $('gameStatsStatus').textContent='Die neuen Zähler benötigen Mod 0.4.2. Noch nicht übertragene Werte werden als „–“ angezeigt.';
+  else $('gameStatsStatus').textContent='Die neuen Zähler benötigen Mod 0.4.3. Noch nicht übertragene Werte werden als „–“ angezeigt.';
 }
 const buttons=[...document.querySelectorAll('[role=tab]')];
 function activate(button){
   for(const b of buttons){const active=b===button;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')).hidden=!active;}
-  $('gameStatsNote').hidden=['overview','team','food'].includes(button.dataset.tab);
+  $('gameStatsNote').hidden=['overview','team','food','blocks'].includes(button.dataset.tab);
   history.replaceState(null,'','#'+button.dataset.tab);
 }
 buttons.forEach((button,i)=>{
@@ -127,4 +151,3 @@ buttons.forEach((button,i)=>{
 });
 activate(buttons.find(b=>b.dataset.tab===location.hash.slice(1))||buttons[0]);
 window.addEventListener('stats-data-change',renderCategories);renderCategories();
-
