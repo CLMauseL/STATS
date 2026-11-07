@@ -1,0 +1,38 @@
+
+name: Build SwissCraft STATS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: mod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 25 installieren
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Gradle installieren
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Minecraft-Mod bauen
+        run: gradle build --no-daemon
+
+      - name: JAR bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwissCraft-STATS-Mod
+          path: mod/build/libs/*.jar
+          if-no-files-found: error
