@@ -1,7 +1,8 @@
 {
-  "key.category.farmingtracker.controls":"Farming Tracker",
-  "key.farmingtracker.startstop":"Start / stop session",
-  "key.farmingtracker.pause":"Pause / resume session",
-  "key.farmingtracker.hud":"Toggle HUD",
-  "key.farmingtracker.export":"Export current session"
+  "key.category.farmingtracker.controls": "Farming Tracker",
+  "key.farmingtracker.startstop": "Start / stop session",
+  "key.farmingtracker.pause": "Pause / resume session",
+  "key.farmingtracker.hud": "Toggle HUD",
+  "key.farmingtracker.export": "Export current session",
+  "key.farmingtracker.connect": "Connect Holzkopfarmy"
 }

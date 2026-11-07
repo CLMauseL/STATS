@@ -1,5 +1,5 @@
-import {minecraftNames} from './minecraft-names.js?v=clean-block-names';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=clean-block-names';
+import {minecraftNames} from './minecraft-names.js?v=easy-login-050';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=easy-login-050';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -231,6 +231,6 @@ buttons.forEach((button,i)=>{
   button.onkeydown=e=>{let index;if(e.key==='ArrowRight')index=(i+1)%buttons.length;else if(e.key==='ArrowLeft')index=(i+buttons.length-1)%buttons.length;else if(e.key==='Home')index=0;else if(e.key==='End')index=buttons.length-1;else return;e.preventDefault();activate(buttons[index]);buttons[index].focus();};
 });
 $('openLiveLogin').onclick=()=>{activate(buttons.find(b=>b.dataset.tab==='team'));$('cloudEmail').focus()};
-activate(buttons.find(b=>b.dataset.tab===location.hash.slice(1))||buttons[0]);
+activate(buttons.find(b=>b.dataset.tab===(new URL(window.statsCloud.pairingLink).searchParams.has('pairPort')?'team':location.hash.slice(1)))||buttons[0]);
 $('player').addEventListener('change',()=>{const value=$('player').value;if(value!==selectedPlayer)selectPlayer(value)});
 window.addEventListener('stats-data-change',renderCategories);renderCategories();

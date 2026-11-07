@@ -39,3 +39,9 @@ Die statische Webseite unterstützt jetzt zusätzlich private Firebase-Live-Date
 
 ## Datenschutz
 Jeder Teilnehmer entscheidet selbst, welche Daten er teilt. Servernamen/IP-Adressen stehen derzeit in lokalen JSON-Dateien; vor öffentlichem Teilen Dateien prüfen. Die Client-Daten sind manipulierbar. Für eine belastbare Lohnabrechnung braucht es Zustimmungs- und Admin-Prozesse.
+
+## Einfache Verbindung ab 0.5.0
+
+Die Mod steht auf der Team-Seite zum Download bereit. Alte Tracker-JAR ersetzen, Minecraft starten und im Haupt- oder Pausenmenü **Holzkopfarmy verbinden** wählen (im Spiel alternativ F6). Im geöffneten Browser mit dem eigenen bestätigten und freigegebenen Teamkonto anmelden und **Diese Mod verbinden** wählen. Die Mod speichert die Verbindung automatisch im aktiven Spielprofil. Es muss keine Anmeldedatei verschoben werden.
+
+Das Verbindungsfenster gilt fünf Minuten und ist an einen zufälligen Einmalcode, den Minecraft-Spielernamen und den Webseiten-Ursprung gebunden. Der Rückkanal lauscht ausschließlich auf 127.0.0.1 an einem zufälligen Port. Persönliche Anmeldedaten werden nur im POST-Body übertragen, niemals in URL, Download-JAR oder Repository. Die Mod zeigt über **Verbindungsstatus** den Uploadstand. Für Browser, die lokale Verbindungen blockieren, bleibt unter **Alternative: Verbindungsdatei herunterladen** der bisherige Weg verfügbar.

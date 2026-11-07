@@ -30,7 +30,7 @@ final class CloudSync {
 
     private void sync() {
         Path configFile = directory.resolve("cloud-session.json");
-        if (!Files.isRegularFile(configFile)) { uploaded.clear(); credential = ""; return; }
+        if (!Files.isRegularFile(configFile)) { uploaded.clear(); credential = ""; CloudStatus.message="Nicht verbunden – im Menü Holzkopfarmy verbinden wählen"; return; }
         try {
             JsonObject config = JsonParser.parseString(Files.readString(configFile)).getAsJsonObject();
             if (!PROJECT.equals(config.get("projectId").getAsString())
@@ -56,7 +56,8 @@ final class CloudSync {
                 credential = rotated;
             }
             Path daily = directory.resolve("daily");
-            if (!Files.isDirectory(daily)) return;
+            if (!Files.isDirectory(daily)) { CloudStatus.message="Angemeldet als "+player+" – Multiplayer-Server betreten"; return; }
+            boolean matchingDay = false;
             try (var paths = Files.list(daily)) {
                 for (Path file : paths.filter(p -> p.toString().endsWith(".json")).sorted().toList()) {
                     try {
@@ -64,6 +65,7 @@ final class CloudSync {
                         if (sha256(content).equals(uploaded.get(file.toString()))) continue;
                         JsonObject d = JsonParser.parseString(content).getAsJsonObject();
                         if (!player.equals(d.get("player").getAsString())) continue;
+                        matchingDay = true;
                         if (!TrackingScope.uploadServer(d.get("server").getAsString())) continue;
                         String server = sha256(d.get("server").getAsString());
                         String date = d.get("date").getAsString();
@@ -108,13 +110,17 @@ final class CloudSync {
                         JsonObject request = new JsonObject(); request.add("writes", writes);
                         send("https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/" + DATABASE + "/documents:commit", "POST", request, idToken);
                         uploaded.put(file.toString(), sha256(content));
+                        CloudStatus.message="Verbunden als "+player+" – letzter Upload "+java.time.LocalTime.now().withNano(0);
                     } catch (Exception e) {
                         // One rejected/corrupt day cannot starve every later day. Retry on the next pass.
+                        CloudStatus.message="Upload fehlgeschlagen – Anmeldung / Teamfreigabe prüfen (erneut in 30 s)";
                         System.err.println("[Holzkopf Sync] Tagesstand nicht übertragen; erneuter Versuch in 30 Sekunden.");
                     }
                 }
             }
+            if (!matchingDay && uploaded.isEmpty()) CloudStatus.message="Kein passender Multiplayer-Tagesstand für "+player+" – Minecraft-Name prüfen";
         } catch (Exception e) {
+            CloudStatus.message="Anmeldung nicht verfügbar – Holzkopfarmy erneut verbinden";
             expiresAt = 0;
             System.err.println("[Holzkopf Sync] Verbindung nicht verfügbar. Anmeldung und Teamfreigabe im Dashboard prüfen.");
         }
