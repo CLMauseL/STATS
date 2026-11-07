@@ -130,6 +130,7 @@ el('bridgeConnect').onclick=()=>action(async()=>{
  const config={projectId:firebaseConfig.projectId,databaseId,apiKey:firebaseConfig.apiKey,uid:user.uid,player:membership.player,refreshToken:user.refreshToken};
  try{
   await completePairing(pairing,config);paired=true;
+  const clean=new URL(location.href);clean.searchParams.delete('pairPort');clean.searchParams.delete('player');clean.hash='team';history.replaceState(null,'',clean);
   el('bridgeStatus').textContent='Verbunden! Die Mod hat deine Anmeldung gespeichert. Zum Server zurückkehren; der erste Upload folgt innerhalb einer Minute.';
   el('bridgeConnect').textContent='Mod verbunden ✓';enableLive();
  }catch(error){

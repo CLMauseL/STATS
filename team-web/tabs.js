@@ -224,7 +224,7 @@ const buttons=[...document.querySelectorAll('.tabbar [role=tab]')];
 function activate(button){
   for(const b of buttons){const active=b===button;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')).hidden=!active;}
   $('gameStatsNote').hidden=['overview','team','food','blocks'].includes(button.dataset.tab);
-  history.replaceState(null,'','#'+button.dataset.tab);
+  if(!new URL(location.href).searchParams.has('pairPort'))history.replaceState(null,'','#'+button.dataset.tab);
 }
 buttons.forEach((button,i)=>{
   button.onclick=()=>activate(button);
