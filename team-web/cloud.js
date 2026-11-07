@@ -10,7 +10,12 @@ const auth = getAuth(initializeApp(firebaseConfig));
 const db = getFirestore(auth.app, databaseId);
 await setPersistence(auth, browserSessionPersistence);
 let stopMember = () => {}, stopDays = () => {}, generation = 0, membership = null;
-const status = text => { el('cloudStatus').textContent = text; };
+const status = text => {
+  el('cloudStatus').textContent = text;
+  el('liveDataMessage').textContent = text;
+  el('liveDataState').textContent = text.startsWith('Live verbunden') ? 'Minecraft-Gesamtstände verbunden' : 'Live-Verbindung';
+};
+const enableLive = () => { el('cloudMode').checked = true; window.statsCloud.mode(true); };
 const clear = () => {
   stopMember(); stopDays(); membership = null; el('pairMod').disabled = true;
   window.statsCloud.replace([]);
@@ -28,6 +33,7 @@ async function action(fn) {
 }
 el('cloudLogin').onclick = () => action(async () => {
   await signInWithEmailAndPassword(auth, el('cloudEmail').value.trim(), el('cloudPassword').value);
+  enableLive();
 });
 el('cloudSignup').onclick = () => action(async () => {
   if (el('cloudPassword').value.length < 12) {
@@ -51,7 +57,7 @@ el('cloudMode').onchange = () => window.statsCloud.mode(el('cloudMode').checked)
 async function connect(user) {
   const current = ++generation; clear();
   el('cloudUid').textContent = user ? `Konto-ID für die Teamfreigabe: ${user.uid}` : '';
-  if (!user) { status('Nicht angemeldet.'); return; }
+  if (!user) { if(window.statsCloud.hasOffline()){el('cloudMode').checked=false;window.statsCloud.mode(false)} status('Nicht angemeldet. Unter „Anmeldung & Live-Daten“ anmelden, um deine vorhandenen Minecraft-Statistiken zu laden.'); return; }
   if (!user.emailVerified) { status('Bitte zuerst deine E-Mail-Adresse bestätigen.'); return; }
   // Keep membership live: revoked accounts immediately lose the displayed data.
   stopMember = onSnapshot(doc(db, 'members', user.uid), snap => {
@@ -62,6 +68,7 @@ async function connect(user) {
       status('Angemeldet. Teamfreigabe durch den Projektinhaber erforderlich.'); return;
     }
     el('pairMod').disabled = false;
+    enableLive();
     // Core listener is intentional: this dashboard requires real-time updates.
     stopDays = onSnapshot(collection(db, 'daily'), snapshot => {
       if (current !== generation) return;
@@ -69,16 +76,18 @@ async function connect(user) {
       for (const item of snapshot.docs) {
         try {
           const d = item.data();
-          let meals = null;
+          let meals = null, vanilla = null;
           try { meals = d.foodConsumedJson ? JSON.parse(d.foodConsumedJson) : null; } catch { /* Optional malformed food data stays unknown. */ }
+          try { vanilla = d.vanillaStatsJson ? JSON.parse(d.vanillaStatsJson) : null; } catch { /* Keep the valid daily record. */ }
           rows.push(window.statsCloud.validate({...d, blocks: JSON.parse(d.blocksJson),
             foodConsumed: meals,
-            vanillaStats: d.vanillaStatsJson ? JSON.parse(d.vanillaStatsJson) : null,
+            vanillaStats: vanilla,
             inventoryGains: JSON.parse(d.inventoryGainsJson)}));
         } catch { /* Ignore corrupt client payloads, never render raw HTML. */ }
       }
       window.statsCloud.replace(rows);
-      status(`Live verbunden als ${membership.player} · ${rows.length} Tagesstände · ${new Date().toLocaleTimeString('de-CH')}`);
+      const count=rows.reduce((n,r)=>n+Object.keys(r.vanillaStats||{}).length,0);
+      status(`Live verbunden als ${membership.player} · ${rows.length} Tagesstände · ${count} übertragene Minecraft-Statistikwerte`);
     }, () => { window.statsCloud.replace([]); status('Live-Verbindung unterbrochen oder Freigabe entzogen.'); });
   }, () => {
     stopDays(); membership = null; window.statsCloud.replace([]); el('pairMod').disabled = true;
