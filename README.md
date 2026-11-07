@@ -2,6 +2,8 @@
 
 **Aktuell:** Firebase-Anmeldung, private Teamfreigaben, automatische Mod-Synchronisierung und Live-Dashboard sind ergänzt. Einrichtung, Tests und Einschränkungen stehen in [FIREBASE.md](FIREBASE.md). Minecraft Java 26.2 / Fabric; ein Test im Spiel ist weiterhin erforderlich. Die folgenden Abschnitte beschreiben außerdem den bisherigen Offline-Import.
 
+**Mod 0.4.0:** Neue Tabs und Ranglisten für Tode, Essen, gelaufene Blöcke, Sprünge, Kampf und weitere Minecraft-Gesamtzähler. Die zuvor nicht erfassten Tode/Breeding werden nun über die Vanilla-Statistiken synchronisiert und getrennt vom Wochenlohn angezeigt. Alte Tagesdateien ohne diese Werte bleiben unbekannt.
+
 ## Inhalt
 - `mod/` – eigenständige Fabric-Client-Mod. Nicht mit der Ancient Countdown Mod verwechseln.
 - `team-web/index.html` – lokale Offline-Webseite mit Team-Wochenbericht und Lifetime-Ansicht.

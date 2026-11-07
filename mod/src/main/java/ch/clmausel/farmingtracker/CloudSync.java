@@ -77,6 +77,17 @@ final class CloudSync {
                             JsonObject value = new JsonObject(); value.addProperty("stringValue", entry.getValue()); fields.add(entry.getKey(), value);
                         }
                         String name = "projects/" + PROJECT + "/databases/" + DATABASE + "/documents/daily/" + id;
+                        if (d.has("gameStats") && !d.get("gameStats").isJsonNull()) {
+                            JsonObject statsFields = new JsonObject();
+                            for (var stat : d.getAsJsonObject("gameStats").entrySet()) {
+                                JsonObject value = new JsonObject(); value.addProperty("integerValue", stat.getValue().getAsString());
+                                statsFields.add(stat.getKey(), value);
+                            }
+                            JsonObject stats = new JsonObject(), map = new JsonObject();
+                            map.add("fields", statsFields); stats.add("mapValue", map); fields.add("gameStats", stats);
+                            JsonObject at = new JsonObject(); at.addProperty("integerValue", d.get("gameStatsAt").getAsString());
+                            fields.add("gameStatsAt", at);
+                        }
                         JsonObject update = new JsonObject(); update.addProperty("name", name); update.add("fields", fields);
                         JsonObject transform = new JsonObject(); transform.addProperty("fieldPath", "updatedAt"); transform.addProperty("setToServerValue", "REQUEST_TIME");
                         JsonArray transforms = new JsonArray(); transforms.add(transform);

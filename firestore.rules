@@ -17,9 +17,25 @@ service cloud.firestore {
     }
     function uidUnchanged(d) { return d.ownerUid == request.auth.uid; }
     function uidNotModified(d) { return d.ownerUid == resource.data.ownerUid; }
+    function validCounter(n) { return n is int && n >= 0 && n <= 1000000000000; }
+    function validGameStats(s) {
+      return s is map && s.keys().hasAll(['deaths','foodEaten','cakeSlices','mobKills','playerKills','breeding','jumps','walkCm','sprintCm','swimCm','fishCaught','trades'])
+        && s.keys().hasOnly(['deaths','foodEaten','cakeSlices','mobKills','playerKills','breeding','jumps','walkCm','sprintCm','swimCm','fishCaught','trades'])
+        && validCounter(s.deaths) && validCounter(s.foodEaten) && validCounter(s.cakeSlices)
+        && validCounter(s.mobKills) && validCounter(s.playerKills) && validCounter(s.breeding)
+        && validCounter(s.jumps) && validCounter(s.walkCm) && validCounter(s.sprintCm)
+        && validCounter(s.swimCm) && validCounter(s.fishCaught) && validCounter(s.trades);
+    }
+    function optionalGameStats(d) {
+      // Backward compatible: old mods may continue sending the original day schema.
+      return (!('gameStats' in d) && !('gameStatsAt' in d))
+        || (validGameStats(d.gameStats) && d.gameStatsAt is int && d.gameStatsAt > 0
+          && d.gameStatsAt <= request.time.toMillis() + 300000);
+    }
     function validDaily(d, id) {
       return d.keys().hasAll(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
-        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
+        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt','gameStats','gameStatsAt'])
+        && optionalGameStats(d)
         && d.schema == 2 && d.type == 'daily'
         && d.ownerUid is string && d.ownerUid.size() <= 128 && uidUnchanged(d)
         && id == d.ownerUid + '_' + hashing.sha256(d.server + '_' + d.date).toHexString().lower()

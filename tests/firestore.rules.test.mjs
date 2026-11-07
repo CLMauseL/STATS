@@ -64,3 +64,18 @@ test('revocation blocks existing sessions on next operation',async()=>{
   await assertFails(getDocs(collection(client,'daily')));
   await assertFails(updateDoc(doc(client,'daily',id()),{updatedAt:serverTimestamp()}));
 });
+test('bounded vanilla counters accepted, malformed counters denied on create and update',async()=>{
+  const gameStats=Object.fromEntries(['deaths','foodEaten','cakeSlices','mobKills','playerKills','breeding','jumps','walkCm','sprintCm','swimCm','fishCaught','trades'].map(k=>[k,0]));
+  const full={...data(),gameStats,gameStatsAt:Date.now()};
+  const ref=doc(db(),'daily',id());
+  await assertSucceeds(setDoc(ref,full));
+  await assertSucceeds(updateDoc(ref,{gameStats:{...gameStats,deaths:9,jumps:123,walkCm:12345},updatedAt:serverTimestamp()}));
+  for(const invalid of [{...gameStats,deaths:-1},{...gameStats,jumps:1.5},{...gameStats,walkCm:1e12+1},{...gameStats,admin:true},{deaths:1}]){
+    await assertFails(setDoc(ref,{...full,gameStats:invalid}));
+    await assertFails(setDoc(doc(db('bob'),'daily',id('bob')),{...data('bob'),gameStatsAt:Date.now(),gameStats:invalid}));
+  }
+  await assertFails(updateDoc(ref,{gameStatsAt:Date.now()+3600000,updatedAt:serverTimestamp()}));
+  const withoutTime={...full};delete withoutTime.gameStatsAt;await assertFails(setDoc(ref,withoutTime));
+  await assertFails(setDoc(doc(db(),'daily','wrong'),full));
+});
+
