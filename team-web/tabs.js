@@ -112,7 +112,7 @@ function renderFood(players){
   const ids=[...new Set(players.flatMap(p=>Object.entries(p.items).filter(([,n])=>n>0).map(([id])=>id)))].sort((a,b)=>foodName(a).localeCompare(foodName(b),'de'));
   fill(food,ids.map(id=>[id,foodName(id)]),foodState.item,'Alle Lebensmittel');
   foodState.player=person.value;foodState.item=food.value;toolbar.append(person,food);root.append(toolbar);
-  const ranked=players.filter(p=>foodState.player==='*'||p.player===foodState.player)
+  const ranked=players
     .map(p=>({...p,stats:foodState.item==='*'?p.items:{[foodState.item]:p.items[foodState.item]||0}}));
   summary.append(table(ranked,[[foodState.item==='*'?'Insgesamt benutzt / Kuchenstücke':foodName(foodState.item)+' insgesamt',foodTotal]],foodTotal));
   person.onchange=()=>selectPlayer(person.value);food.onchange=()=>{foodState.item=food.value;renderFood(players)};
