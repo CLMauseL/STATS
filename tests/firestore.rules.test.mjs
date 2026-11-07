@@ -72,8 +72,10 @@ test('bounded vanilla counters accepted, malformed counters denied on create and
   await assertSucceeds(updateDoc(ref,{gameStats:{...gameStats,deaths:9,jumps:123,walkCm:12345},updatedAt:serverTimestamp()}));
   for(const invalid of [{...gameStats,deaths:-1},{...gameStats,jumps:1.5},{...gameStats,walkCm:1e12+1},{...gameStats,admin:true},{deaths:1}]){
     await assertFails(setDoc(ref,{...full,gameStats:invalid}));
+    await assertFails(setDoc(doc(db('bob'),'daily',id('bob')),{...data('bob'),gameStatsAt:Date.now(),gameStats:invalid}));
   }
   await assertFails(updateDoc(ref,{gameStatsAt:Date.now()+3600000,updatedAt:serverTimestamp()}));
   const withoutTime={...full};delete withoutTime.gameStatsAt;await assertFails(setDoc(ref,withoutTime));
   await assertFails(setDoc(doc(db(),'daily','wrong'),full));
 });
+
