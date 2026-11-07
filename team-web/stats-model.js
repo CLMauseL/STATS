@@ -104,6 +104,7 @@ export function historicalFoodTotals(rows, foodIds) {
 
 export function minecraftDisplay(stat, value) {
  const [type,id]=stat.split('/');
+ if(stat===MOVEMENT_TOTAL)return {value:value/100000,unit:'km'};
  if(type!=='minecraft:custom')return {value,unit:'Anzahl'};
  if(id.endsWith('_one_cm'))return value>=100000?{value:value/100000,unit:'km'}:value>=100?{value:value/100,unit:'m'}:{value,unit:'cm'};
  if(id.startsWith('minecraft:damage_'))return {value:value/10,unit:'Schadenspunkte'};
@@ -114,7 +115,8 @@ export function minecraftDisplay(stat, value) {
 }
 
 export function statisticRanking(rows, stat) {
- const entries=vanillaRows(rows).filter(e=>e.stat===stat).sort((a,b)=>b.value-a.value||a.player.localeCompare(b.player,'de'));
+ const values=stat===MOVEMENT_TOTAL?movementTotals(rows).filter(p=>p.known).map(p=>({player:p.player,stat,value:p.stats.totalCm})):vanillaRows(rows).filter(e=>e.stat===stat);
+ const entries=values.sort((a,b)=>b.value-a.value||a.player.localeCompare(b.player,'de'));
  let previous,rank=0;
  return entries.map((entry,i)=>{if(entry.value!==previous){rank=i+1;previous=entry.value}return {...entry,rank}});
 }
@@ -128,4 +130,15 @@ export function generalCategory(stat){
  if(id==='eat_cake_slice')return 'food';
  if(/^(interact_with_|inspect_|open_|play_|clean_|fill_|use_|trigger_|tune_|aviate_|enchant_|sleep_|bell_|raid_|target_|pot_|traded_|talked_|drop$)/.test(id))return 'interactions';
  return 'other';
+}
+
+export const MOVEMENT_TOTAL='holzkopf:movement_total/minecraft:distance';
+export function movementTotals(rows){
+ const players=new Map(rows.filter(isMultiplayerDay).map(r=>[r.player,{player:r.player,known:false,stats:{totalCm:0,jumps:0,distances:{}}}]));
+ for(const e of vanillaRows(rows)){
+  const p=players.get(e.player);
+  if(e.stat.startsWith('minecraft:custom/')&&e.stat.endsWith('_one_cm')){p.known=true;p.stats.distances[e.stat]=e.value;p.stats.totalCm+=e.value;}
+  if(e.stat==='minecraft:custom/minecraft:jump')p.stats.jumps=e.value;
+ }
+ return [...players.values()];
 }

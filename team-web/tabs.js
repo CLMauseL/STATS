@@ -1,5 +1,5 @@
-import {minecraftNames} from './minecraft-names.js?v=ranking-groups';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory} from './stats-model.js?v=ranking-groups';
+import {minecraftNames} from './minecraft-names.js?v=food-movement-total';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking,generalCategory,movementTotals,MOVEMENT_TOTAL} from './stats-model.js?v=food-movement-total';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -20,7 +20,7 @@ function renderPlayerTabs(){
 }
 let sectionButtons,subcategoryButtons;
 const statSection=type=>type==='minecraft:custom'?'general':['minecraft:killed','minecraft:killed_by'].includes(type)?'mobs':'items';
-function statName(stat){const [type,id]=stat.split('/'),name=id.replace(':','.');const keys=type==='minecraft:custom'?['stat.'+name]:statSection(type)==='mobs'?['entity.'+name]:['item.'+name,'block.'+name];return keys.map(k=>minecraftNames[k]).find(Boolean)||id}
+function statName(stat){if(stat===MOVEMENT_TOTAL)return 'Gesamtstrecke · alle Bewegungsarten';const [type,id]=stat.split('/'),name=id.replace(':','.');const keys=type==='minecraft:custom'?['stat.'+name]:statSection(type)==='mobs'?['entity.'+name]:['item.'+name,'block.'+name];return keys.map(k=>minecraftNames[k]).find(Boolean)||id}
 let allToolbar,allSearch,allGroup,allPlayer,allTable,allCount,allPrev,allNext,allSort;
 function renderAllStats(){
   const root=$('stats-all');
@@ -96,7 +96,7 @@ function table(players,columns,metric){
     body.append(row);
   });t.append(body);return t;
 }
-const foodState={player:'*',item:'*'};
+const foodState={player:'*',item:'*',sort:'count-desc'};
 const foodNames={'minecraft:bread':'Brot','minecraft:cooked_beef':'Steak','minecraft:beef':'Rohes Rindfleisch','minecraft:carrot':'Karotte','minecraft:golden_carrot':'Goldene Karotte','minecraft:apple':'Apfel','minecraft:golden_apple':'Goldener Apfel','minecraft:enchanted_golden_apple':'Verzauberter goldener Apfel','minecraft:potato':'Kartoffel','minecraft:baked_potato':'Ofenkartoffel','minecraft:poisonous_potato':'Giftige Kartoffel','minecraft:cooked_porkchop':'Gebratenes Schweinefleisch','minecraft:porkchop':'Rohes Schweinefleisch','minecraft:cooked_chicken':'Gebratenes Hühnchen','minecraft:chicken':'Rohes Hühnchen','minecraft:cooked_mutton':'Gebratenes Hammelfleisch','minecraft:mutton':'Rohes Hammelfleisch','minecraft:cooked_rabbit':'Gebratenes Kaninchen','minecraft:rabbit':'Rohes Kaninchen','minecraft:cooked_salmon':'Gebratener Lachs','minecraft:salmon':'Roher Lachs','minecraft:cooked_cod':'Gebratener Kabeljau','minecraft:cod':'Roher Kabeljau','minecraft:sweet_berries':'Süßbeeren','minecraft:glow_berries':'Leuchtbeeren','minecraft:melon_slice':'Melonenscheibe','minecraft:cookie':'Keks','minecraft:pumpkin_pie':'Kürbiskuchen','minecraft:cake':'Kuchenstück','minecraft:honey_bottle':'Honigflasche','minecraft:dried_kelp':'Getrockneter Seetang','minecraft:rotten_flesh':'Verrottetes Fleisch','minecraft:spider_eye':'Spinnenauge','minecraft:chorus_fruit':'Chorusfrucht','minecraft:mushroom_stew':'Pilzsuppe','minecraft:beetroot_soup':'Borschtsch','minecraft:beetroot':'Rote Bete','minecraft:rabbit_stew':'Kaninchenragout','minecraft:suspicious_stew':'Verdächtige Suppe','minecraft:tropical_fish':'Tropenfisch','minecraft:pufferfish':'Kugelfisch'};
 const foodName=id=>foodNames[id]||id.split(':').pop().replaceAll('_',' ');
 function renderFood(players){
@@ -111,7 +111,8 @@ function renderFood(players){
   fill(person,players.map(p=>[p.player,p.player]),foodState.player,'Alle Spieler');
   const ids=[...new Set(players.flatMap(p=>Object.entries(p.items).filter(([,n])=>n>0).map(([id])=>id)))].sort((a,b)=>foodName(a).localeCompare(foodName(b),'de'));
   fill(food,ids.map(id=>[id,foodName(id)]),foodState.item,'Alle Lebensmittel');
-  foodState.player=person.value;foodState.item=food.value;toolbar.append(person,food);root.append(toolbar);
+  const sort=node('select');sort.setAttribute('aria-label','Essen sortieren');for(const [id,label] of [['count-desc','Menge: höchste zuerst'],['count-asc','Menge: niedrigste zuerst'],['name','Lebensmittel: A–Z']]){const o=node('option',label);o.value=id;sort.append(o)}sort.value=foodState.sort;sort.onchange=()=>{foodState.sort=sort.value;renderFood(players)};
+  foodState.player=person.value;foodState.item=food.value;toolbar.append(person,food,sort);root.append(toolbar);
   const ranked=players
     .map(p=>({...p,stats:foodState.item==='*'?p.items:{[foodState.item]:p.items[foodState.item]||0}}));
   summary.append(table(ranked,[[foodState.item==='*'?'Insgesamt benutzt / Kuchenstücke':foodName(foodState.item)+' insgesamt',foodTotal]],foodTotal));
@@ -120,14 +121,15 @@ function renderFood(players){
   const body=node('tbody');
   const entries=players.flatMap(p=>Object.entries(p.items).map(([id,count])=>({id,count,player:p.player})))
     .filter(x=>x.count>0&&(foodState.player==='*'||x.player===foodState.player)&&(foodState.item==='*'||x.id===foodState.item))
-    .sort((a,b)=>foodName(a.id).localeCompare(foodName(b.id),'de')||b.count-a.count||a.player.localeCompare(b.player,'de'));
+    .sort((a,b)=>(foodState.sort==='count-desc'?b.count-a.count:foodState.sort==='count-asc'?a.count-b.count:foodName(a.id).localeCompare(foodName(b.id),'de'))||foodName(a.id).localeCompare(foodName(b.id),'de')||a.player.localeCompare(b.player,'de'));
+  const total=node('p','Insgesamt in dieser Auswahl: '+format(entries.reduce((n,e)=>n+e.count,0))+' Lebensmittel-Nutzungen / Kuchenstücke','stat-count');root.insertBefore(total,summary);
   for(const entry of entries){const row=node('tr'),name=node('td',foodName(entry.id));name.title=entry.id;row.append(name,node('td',entry.player),node('td',format(entry.count)));body.append(row)}
   t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
   if(!entries.length)root.append(node('p','Noch keine historischen Lebensmittel-Zähler für diese Auswahl übertragen.','empty'));
 }
 
 const blockName=id=>minecraftNames['block.'+id.replace(':','.')]||id.replace(/^minecraft:/,'').replaceAll('_',' ').replace(/\b[a-z]/g,c=>c.toUpperCase());
-const blockState={type:'minecraft:mined',player:'*',item:'*'};
+const blockState={type:'minecraft:mined',player:'*',item:'*',sort:'count-desc'};
 function renderBlocks(){
  const root=$('stats-blocks');root.replaceChildren(node('h2','Welche Blöcke werden am meisten gesetzt oder abgebaut?'));
  root.append(node('p','Vergangene abgebaute Blöcke stammen aus der gesamten Minecraft-Serverhistorie. Historisch benutzte Block-Items sind separat auswählbar: Sie können Platzierungen enthalten, sind aber keine bestätigte Bauzählung. Ein verlässlicher historischer Zähler gesetzter Blöcke fehlt in Minecraft. Erfasste Platzierungen seit Mod 0.4.3 bleiben separat; sie werden nicht mit historischen Nutzungen addiert.','note'));
@@ -139,16 +141,17 @@ function renderBlocks(){
  blockState.player=select('Blöcke nach Spieler filtern',[['*','Alle Spieler'],...[...new Set(entries.map(e=>e.player))].sort().map(p=>[p,p])],blockState.player,v=>selectPlayer(v));
  const blocks=entries.filter(e=>e.stat.startsWith(blockState.type+'/')&&(blockState.type!=='minecraft:used'||Object.hasOwn(minecraftNames,'block.'+e.stat.split('/')[1].replace(':','.'))));
  blockState.item=select('Block auswählen',[['*','Alle Blöcke'],...[...new Set(blocks.map(e=>e.stat.split('/')[1]))].sort((a,b)=>blockName(a).localeCompare(blockName(b))).map(id=>[id,blockName(id)])],blockState.item,v=>blockState.item=v);
+ select('Blöcke sortieren',[['count-desc','Menge: höchste zuerst'],['count-asc','Menge: niedrigste zuerst'],['name','Blockname: A–Z']],blockState.sort,v=>blockState.sort=v);
  const filtered=blocks.filter(e=>(blockState.player==='*'||e.player===blockState.player)&&(blockState.item==='*'||e.stat.split('/')[1]===blockState.item));
  const totals=new Map();for(const e of filtered){const id=e.stat.split('/')[1];totals.set(id,(totals.get(id)||0)+e.value)}
  const best=[...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0];
  root.append(node('p',best?'Häufigster Block dieser Auswahl: '+blockName(best[0])+' · '+format(best[1])+' Vorgänge':'Noch keine Blockdaten für diese Auswahl. Mod 0.4.3 erfasst neue Platzierungen.','note'));
  const t=node('table'),h=node('tr');for(const v of ['Rang','Block','Spieler',blockState.type==='holzkopf:placed'?'Erfasst gesetzt':blockState.type==='minecraft:mined'?'Historisch abgebaut':'Historisch benutzt'])h.append(node('th',v));const head=node('thead');head.append(h);t.append(head);const body=node('tbody');
- filtered.sort((a,b)=>b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),blockName(e.stat.split('/')[1]),e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
+ filtered.sort((a,b)=>(blockState.sort==='count-desc'?b.value-a.value:blockState.sort==='count-asc'?a.value-b.value:blockName(a.stat.split('/')[1]).localeCompare(blockName(b.stat.split('/')[1])))||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),blockName(e.stat.split('/')[1]),e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
 }
 
 
-const rankingGroupOf=stat=>stat.startsWith('minecraft:custom/')?'general:'+generalCategory(stat):stat.split('/')[0];
+const rankingGroupOf=stat=>stat===MOVEMENT_TOTAL?'general:movement':stat.startsWith('minecraft:custom/')?'general:'+generalCategory(stat):stat.split('/')[0];
 const rankingGroups=[...generalGroups.filter(([id])=>id!=='*').map(([id,label])=>['general:'+id,'Allgemein · '+label]),['minecraft:mined','Items · Abgebaut'],['minecraft:used','Items · Benutzt'],['minecraft:crafted','Items · Hergestellt'],['minecraft:broken','Items · Zerbrochen'],['minecraft:picked_up','Items · Aufgesammelt'],['minecraft:dropped','Items · Weggeworfen'],['minecraft:killed','Mobs · Besiegt'],['minecraft:killed_by','Mobs · Getötet durch'],['holzkopf:placed','Blöcke · Platzierungen']];
 const rankingState={stat:'minecraft:custom/minecraft:deaths',player:'*',search:'',group:'general:combat'};
 function renderStatisticRanking(root){
@@ -160,7 +163,7 @@ function renderStatisticRanking(root){
  const group=node('select');group.setAttribute('aria-label','Ranglisten-Unterkategorie');for(const [id,label] of rankingGroups){const o=node('option',label);o.value=id;group.append(o)}group.value=rankingState.group;
  const groupLabel=node('label','Statistikbereich: ');groupLabel.append(group);const playerLabel=node('label','Spieler: ');playerLabel.append(person);toolbar.append(groupLabel,playerLabel);toolbar.classList.add('ranking-group-filters');root.append(toolbar);
  const detail=node('details',undefined,'stat-details'),detailSummary=node('summary','Einzelwert ändern'),detailControls=node('div',undefined,'nav'),statLabel=node('label','Einzelstatistik: ');statLabel.append(stats);detailControls.append(search,statLabel);detail.append(detailSummary,detailControls);root.append(detail);
- const all=vanillaRows(window.statsCloud.getRows());
+ const all=[...vanillaRows(window.statsCloud.getRows()),...movementTotals(window.statsCloud.getRows()).filter(p=>p.known).map(p=>({player:p.player,stat:MOVEMENT_TOTAL,value:p.stats.totalCm}))];
  for(const [id,label] of [['*','Alle Spieler'],...[...new Set(window.statsCloud.getRows().map(r=>r.player))].sort().map(p=>[p,p])]){const o=node('option',label);o.value=id;person.append(o)}
  person.value=[...person.options].some(o=>o.value===rankingState.player)?rankingState.player:'*';rankingState.player=person.value;
  const spotlight=node('div',undefined,'stat-spotlight'),count=node('p',undefined,'note'),results=node('div',undefined,'ranking-results');root.append(spotlight,count,results);
@@ -189,17 +192,33 @@ function renderStatisticRanking(root){
   if(ids.includes(rankingState.stat))stats.value=rankingState.stat;else rankingState.stat=ids[0]||'';
   draw();
  };
- group.onchange=()=>{rankingState.group=group.value;rankingState.search='';search.value='';fill()};search.oninput=()=>{rankingState.search=search.value;fill()};stats.onchange=()=>{rankingState.stat=stats.value;draw()};person.onchange=()=>selectPlayer(person.value);fill();
+ group.onchange=()=>{rankingState.group=group.value;if(group.value==='general:movement')rankingState.stat=MOVEMENT_TOTAL;rankingState.search='';search.value='';fill()};search.oninput=()=>{rankingState.search=search.value;fill()};stats.onchange=()=>{rankingState.stat=stats.value;draw()};person.onchange=()=>selectPlayer(person.value);fill();
+}
+
+
+function renderMovement(){
+ const root=$('stats-movement'),players=movementTotals(window.statsCloud.getRows());root.replaceChildren(node('h2','Bewegung · Gesamtstrecke'));
+ root.append(node('p','Gesamte vorhandene Minecraft-Serverhistorie: Summe aller übertragenen Streckenzähler, einschließlich Elytra, Boot, Pferd, Lore und weiterer Bewegungsarten. Auch Fallen und Klettern zählen als eigene Strecken. Die Gesamtsumme ist keine Luftlinie.','note'));
+ const selected=players.filter(p=>p.known&&(selectedPlayer==='*'||p.player===selectedPlayer));
+ const totals=new Map();for(const p of selected)for(const [id,value] of Object.entries(p.stats.distances))totals.set(id,(totals.get(id)||0)+value);
+ const summary=node('div',undefined,'stat-spotlight');for(const [label,value,unit] of [['Insgesamt',selected.reduce((n,p)=>n+p.stats.totalCm,0)/100000,'km über alle Bewegungsarten'],['Elytra',selected.reduce((n,p)=>n+(p.stats.distances['minecraft:custom/minecraft:aviate_one_cm']||0),0)/100000,'km geflogen'],['Sprünge',selected.reduce((n,p)=>n+p.stats.jumps,0),'Sprünge']]){const card=node('article',undefined,'stat-summary');card.append(node('span',label),node('strong',selected.length?format(value):'–'),node('small',unit));summary.append(card)}root.append(summary);
+ const columns=[['Insgesamt (km)',s=>s.totalCm/100000],['Elytra (km)',s=>(s.distances['minecraft:custom/minecraft:aviate_one_cm']||0)/100000],['Zu Fuß (km)',s=>Object.entries(s.distances).filter(([id])=>/minecraft:(walk|sprint|crouch)_one_cm$/.test(id)).reduce((n,[,v])=>n+v,0)/100000],['Sprünge',s=>s.jumps]];
+ const sort=node('select');sort.setAttribute('aria-label','Bewegungsrangliste sortieren');columns.forEach(([label],i)=>{const o=node('option',label);o.value=i;sort.append(o)});sort.value=String(sortSelection.movement||0);root.append(sort);const result=node('div',undefined,'scroll');root.append(result);const draw=()=>result.replaceChildren(table(players,columns,columns[Number(sort.value)][1]));sort.onchange=()=>{sortSelection.movement=Number(sort.value);draw()};draw();
+ root.append(node('h3','Alle Bewegungsarten · nach Strecke'));const grid=node('div',undefined,'stat-card-grid');
+ for(const [id,value] of [...totals].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))){const card=node('article',undefined,'stat-card'),v=minecraftDisplay(id,value);card.append(node('span','Bewegung','stat-card-kicker'),node('h3',statName(id)),node('strong',format(v.value)+' '+v.unit,'stat-card-value'));grid.append(card)}root.append(grid);
+ if(!selected.length)root.append(node('p','Noch keine Streckenzähler für diese Auswahl übertragen.','empty'));
 }
 
 function renderCategories(){
   renderPlayerTabs();
   renderAllStats();
   renderBlocks();
+  renderMovement();
   const rows=window.statsCloud.getRows(),players=playerTotals(rows),known=players.filter(p=>p.known);
   const foodPlayers=historicalFoodTotals(rows,Object.keys(foodNames)).map(p=>({...p,stats:p.items}));
   renderFood(foodPlayers);
   for(const [id,category] of Object.entries(categories)){
+    if(id==='movement')continue;
     const target=$('stats-'+id);target.replaceChildren();target.append(node('h2',category.title));
     const select=node('select');select.setAttribute('aria-label','Rangliste sortieren: '+category.title);
     category.columns.forEach(([label],i)=>{const o=node('option',label);o.value=i;select.append(o)});
@@ -214,10 +233,10 @@ function renderCategories(){
   renderStatisticRanking(target);
   target.append(node('h3','Die Holzkopfarmy-Rekorde'));
   const grid=node('div',undefined,'record-grid');
-  const awards=[['Meiste Tode',s=>s.deaths,'Tode'],['Größter Hunger',foodTotal,'Lebensmittel-Nutzungen / Kuchenstücke'],['Meiste Sprünge',s=>s.jumps,'Sprünge'],['Längste Laufstrecke',s=>blocksTravelled(s.walkCm+s.sprintCm),'Blöcke'],['Meiste Mobs besiegt',s=>s.mobKills,'Mobs'],['Meiste Tiere gezüchtet',s=>s.breeding,'Züchtungen'],['Meiste Fische gefangen',s=>s.fishCaught,'Fische'],['Meiste Handelsgeschäfte',s=>s.trades,'Handelsgeschäfte']];
+  const awards=[['Weiteste Gesamtstrecke',s=>s.totalCm/100000,'km'],['Meiste Tode',s=>s.deaths,'Tode'],['Größter Hunger',foodTotal,'Lebensmittel-Nutzungen / Kuchenstücke'],['Meiste Sprünge',s=>s.jumps,'Sprünge'],['Längste Laufstrecke',s=>blocksTravelled(s.walkCm+s.sprintCm),'Blöcke'],['Meiste Mobs besiegt',s=>s.mobKills,'Mobs'],['Meiste Tiere gezüchtet',s=>s.breeding,'Züchtungen'],['Meiste Fische gefangen',s=>s.fishCaught,'Fische'],['Meiste Handelsgeschäfte',s=>s.trades,'Handelsgeschäfte']];
   for(const [label,metric,unit] of awards){
     const card=node('article',undefined,'metric');card.append(node('span',label));
-    const sorted=rankPlayers(label==='Größter Hunger'?foodPlayers.filter(p=>p.known):known,metric),best=sorted[0];
+    const sorted=rankPlayers(label==='Weiteste Gesamtstrecke'?movementTotals(rows).filter(p=>p.known):label==='Größter Hunger'?foodPlayers.filter(p=>p.known):known,metric),best=sorted[0];
     card.append(node('strong',best?format(metric(best.stats)):'–'));
     card.append(node('p',best?sorted.filter(p=>metric(p.stats)===metric(best.stats)).map(p=>p.player).join(' · '):'Noch keine Daten','record-player'));
     card.append(node('span',unit));grid.append(card);

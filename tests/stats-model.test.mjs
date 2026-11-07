@@ -91,3 +91,10 @@ test('general subcategories group movement, time, combat and interactions logica
  const {generalCategory}=await import('../team-web/stats-model.js');
  for(const [id,group] of [['walk_one_cm','movement'],['jump','movement'],['sneak_time','time'],['time_since_death','time'],['damage_dealt','combat'],['deaths','combat'],['animals_bred','animals'],['fish_caught','animals'],['eat_cake_slice','food'],['open_chest','interactions'],['traded_with_villager','interactions'],['unknown_future_stat','other']])assert.equal(generalCategory('minecraft:custom/minecraft:'+id),group);
 });
+
+test('movement total includes elytra and all native distances, deduplicates snapshots and excludes singleplayer',async()=>{
+ const {movementTotals,MOVEMENT_TOTAL,statisticRanking,minecraftDisplay}=await import('../team-web/stats-model.js');
+ const r=(at,walk,server='remote')=>({player:'Alice',server,gameStatsAt:at,vanillaStats:{'minecraft:custom/minecraft:walk_one_cm':walk,'minecraft:custom/minecraft:aviate_one_cm':500000,'minecraft:custom/minecraft:boat_one_cm':200000,'minecraft:custom/minecraft:happy_ghast_one_cm':100000,'minecraft:custom/minecraft:jump':3}});
+ const rows=[r(1,50000),r(2,100000),r(3,999999,'singleplayer')];
+ const p=movementTotals(rows)[0];assert.equal(p.stats.totalCm,900000);assert.equal(p.stats.jumps,3);assert.equal(statisticRanking(rows,MOVEMENT_TOTAL)[0].value,900000);assert.deepEqual(minecraftDisplay(MOVEMENT_TOTAL,900000),{value:9,unit:'km'});
+});
