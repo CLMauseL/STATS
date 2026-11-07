@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // members/{authUid}: {player: Minecraft name, enabled: bool}.
+    // Only a trusted operator using Admin credentials can grant/revoke membership.
+    // daily/{uid_sha256}: schema, type, ownerUid, player, date, server (SHA-256),
+    // onlineMs/workMs/afkMs (integer milliseconds), bounded resource JSON strings,
+    // updatedAt (server timestamp). No email addresses or server IPs are shared.
+    function isAuthenticated() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function member() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.enabled == true;
+    }
+    function uidUnchanged(d) { return d.ownerUid == request.auth.uid; }
+    function uidNotModified(d) { return d.ownerUid == resource.data.ownerUid; }
+    function validDaily(d, id) {
+      return d.keys().hasAll(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
+        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
+        && d.schema == 2 && d.type == 'daily'
+        && d.ownerUid is string && d.ownerUid.size() <= 128 && uidUnchanged(d)
+        && id == d.ownerUid + '_' + hashing.sha256(d.server + '_' + d.date).toHexString().lower()
+        && d.player is string && d.player.matches('^[A-Za-z0-9_]{1,16}$')
+        && d.player == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.player
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.server is string && d.server.matches('^[a-f0-9]{64}$')
+        && d.onlineMs is int && d.onlineMs >= 0 && d.onlineMs <= 90000000
+        && d.workMs is int && d.workMs >= 0
+        && d.afkMs is int && d.afkMs >= 0 && d.workMs + d.afkMs == d.onlineMs
+        // JSON is opaque to rules; web code validates every resource key and count.
+        // All client statistics are self-reported; never an authorization/payment source.
+        && d.blocksJson is string && d.blocksJson.size() <= 65536
+        && d.inventoryGainsJson is string && d.inventoryGainsJson.size() <= 65536
+        && d.updatedAt == request.time;
+    }
+    match /members/{uid} {
+      allow get: if isOwner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /daily/{id} {
+      allow read: if member();
+      allow create: if member() && validDaily(request.resource.data, id);
+      allow update: if member() && isOwner(resource.data.ownerUid)
+        && uidNotModified(request.resource.data) && validDaily(request.resource.data, id)
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.server == resource.data.server;
+      allow delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

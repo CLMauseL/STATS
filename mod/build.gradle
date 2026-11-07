@@ -1,7 +1,7 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version '1.17.21'
 }
-version = '0.2.0'
+version = '0.3.0'
 group = 'ch.clmausel'
 base { archivesName = 'swisscraft-farming-tracker-26.2' }
 repositories { mavenCentral(); maven { url 'https://maven.fabricmc.net/' } }
@@ -12,3 +12,12 @@ dependencies {
 }
 java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
 tasks.withType(JavaCompile).configureEach { options.release = 25; options.encoding = 'UTF-8' }
+
+tasks.register('accountingTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'ch.clmausel.farmingtracker.AccountingTest'
+}
+check.dependsOn accountingTest
+// Accounting checks are a standalone Java main, executed above without a test framework.
+tasks.named('test', Test) { failOnNoDiscoveredTests = false }

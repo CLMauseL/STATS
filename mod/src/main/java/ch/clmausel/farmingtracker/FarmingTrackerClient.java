@@ -53,6 +53,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        new CloudSync(OUT).start();
         ClientPlayerBlockBreakEvents.AFTER.register((world, player, pos, state) -> {
             if (player == null) return;
             String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
@@ -194,7 +195,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
      * On disconnect, a shorter idle spell counts as active, a longer one as AFK.
      */
     private static final class Lifetime {
-        private static final long LIMIT = 5 * 60_000L;
+        private static final long LIMIT = Accounting.AFK_LIMIT_MS;
         private static final Path DIRECTORY = OUT.resolve("daily");
         private Daily day;
         private long previousNs = -1, pendingIdleMs = 0;
@@ -206,7 +207,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
             if (day == null) return "§aSwissCraft STATS §7| §fNoch keine Tagesdaten";
             long activeMs = day.workMs + (pendingIdleMs < LIMIT ? pendingIdleMs : 0);
             long afkMs = day.afkMs + (pendingIdleMs >= LIMIT ? pendingIdleMs : 0);
-            double diamonds = activeMs * 16.0 / 3_600_000.0;
+            double diamonds = Accounting.diamonds(activeMs);
             return String.format("§aSwissCraft §7| §fOnline %s §7| §bArbeit %s §7| §eAFK %s §7| §b%.1f 💎",
                 clock(day.onlineMs), clock(activeMs), clock(afkMs), diamonds);
         }
@@ -296,18 +297,13 @@ public final class FarmingTrackerClient implements ClientModInitializer {
             try {
                 Files.createDirectories(DIRECTORY);
                 // Work/AFK totals always partition online time; pending idle is a provisional estimate.
-                long pending = pendingIdleMs;
-                if (!finalizing) {
-                    if (pending >= LIMIT) day.afkMs += pending;
-                    else day.workMs += pending;
-                }
+                // Serialize a detached snapshot: a failed disk write must never mutate accounting.
+                Daily saved = JSON.fromJson(JSON.toJson(day), Daily.class);
+                Accounting.Totals totals = Accounting.includingIdle(day.workMs, day.afkMs, finalizing ? 0 : pendingIdleMs);
+                saved.workMs = totals.workMs(); saved.afkMs = totals.afkMs();
                 Path tmp = day.file.resolveSibling(day.file.getFileName() + ".tmp");
-                Files.writeString(tmp, JSON.toJson(day));
+                Files.writeString(tmp, JSON.toJson(saved));
                 Files.move(tmp, day.file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                if (!finalizing) {
-                    if (pending >= LIMIT) day.afkMs -= pending;
-                    else day.workMs -= pending;
-                }
             } catch (Exception e) { System.err.println("[Farming Tracker] Daily save: " + e.getMessage()); }
         }
     }
