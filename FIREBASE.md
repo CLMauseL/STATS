@@ -1,5 +1,17 @@
 # Holzkopf: Live-Teamdaten
 
+## Neu in 0.4.2: Lebensmittel erst nach abgeschlossenem Verzehr
+
+**Essen** wird nach konkretem Lebensmittel und Spieler aufgeteilt. Die Quelle sind abgeschlossene Nutzungen des lokalen Spielers, die Minecraft nach dem serverseitigen Abschluss-Signal durch `completeUsingItem` und dessen Stack-/Benutzungsprüfungen tatsächlich an `finishUsingItem` weitergibt. Nur Items mit FOOD-Komponente zählen; weder Pflanzen, Aufheben, Crafting noch abgebrochene Nutzungen durchlaufen diesen Abschluss. Die Zähler sind beobachtete Ereignisse bei laufender Mod, keine geschätzten Inventarverluste.
+
+Kuchenstücke werden separat aus positiven serverseitigen `EAT_CAKE_SLICE`-Änderungen nach dem ersten Ausgangsstand erfasst. Historische Kuchenstücke beim ersten Abruf werden nicht rückwirkend als neue Mahlzeiten gezählt. Das erste Kuchenstück vor dem initialen Ausgangsstand kann fehlen; eine Synchronisationsgrenze um Mitternacht kann das Stück dem Abrufdatum zuordnen.
+
+Lokale Tagesdateien speichern `foodConsumed` pro Item; Firestore erhält eine auf 64 KiB begrenzte `foodConsumedJson`. Wiederholte Uploads ersetzen den Tagesstand. Die Lebensmittelanzeige und der Rekord „Größter Hunger“ summieren diese Tagesereignisse, nicht wiederholte Server-Gesamtstände. Alte Dateien ohne das neue Feld bleiben unbekannt. Es gibt keine zuverlässige rückwirkende Aufteilung, weil `ITEM_USED` bei manchen Lebensmitteln auch Anpflanzen umfasst. Das alte `gameStats.foodEaten` bleibt nur zur Datenkompatibilität erhalten und wird nicht für Essenswerte verwendet.
+
+Die neuen Essenswerte beginnen mit **Mod 0.4.2** und sind ausdrücklich unabhängig von der sonstigen Vanilla-Serverhistorie. **Alle Statistiken → Items benutzt** bleibt als Rohwert sichtbar und heißt deshalb nicht „gegessen“. Getränke ohne FOOD-Komponente (z. B. gewöhnliche Tränke) zählen nicht als Nahrung. Honig und andere Nahrung mit Trinkanimation zählen als verzehrte Nahrung.
+
+Nur Multiplayer bleibt aktiv. JAR ersetzen, Verbindungskonfiguration behalten. Der Callback-Zielpfad wurde gegen Minecraft-26.2-Bytecode geprüft; ein tatsächlicher Spieltest für Essen/Abbruch/Anpflanzen bleibt erforderlich.
+
 ## Neu in 0.4.1: nur Multiplayer, alle bereitgestellten Statistiken
 
 Tracking ist ausschließlich bei einer externen Multiplayer-Verbindung aktiv. Singleplayer und der eigene integrierte LAN-Host werden nicht aufgezeichnet; auf einem fremden LAN-Server verbundene Spieler zählen als Multiplayer. Ein Wechsel in Singleplayer beendet die bisherige Multiplayer-Aufzeichnung sauber. In Singleplayer werden keine Statistik-Anfragen gesendet. Alte lokale Singleplayer-Dateien werden nicht hochgeladen. Die bekannte Singleplayer-Serverkennung wird zusätzlich in Firestore-Schreibregeln abgelehnt und aus allen Dashboard-Berechnungen, Importen und CSV-Berichten gefiltert. Bereits vorhandene Daten werden dadurch nicht gelöscht.

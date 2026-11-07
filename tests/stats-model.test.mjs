@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {STAT_KEYS,validGameStats,playerTotals,rankPlayers,foodTotal,blocksTravelled,validVanillaStats,vanillaRows} from '../team-web/stats-model.js';
+import {STAT_KEYS,validGameStats,playerTotals,rankPlayers,foodTotal,blocksTravelled,validVanillaStats,vanillaRows,consumptionTotals,validConsumedFood} from '../team-web/stats-model.js';
 const stats=changes=>({...Object.fromEntries(STAT_KEYS.map(k=>[k,0])),...changes});
 const row=(player,server,at,changes)=>({player,server,gameStatsAt:at,gameStats:stats(changes)});
 test('repeated daily snapshots never multiply cumulative deaths or meals',()=>{
@@ -40,4 +40,18 @@ test('all vanilla stats deduplicate per server and exclude singleplayer',()=>{
 test('vanilla snapshot rejects malicious keys and noninteger/negative counters',()=>{
  assert.deepEqual(validVanillaStats({'<script>':10,'minecraft:mined/minecraft:stone':12,'minecraft:custom/minecraft:jump':-1,'minecraft:used/minecraft:bread':'30'}),{'minecraft:mined/minecraft:stone':12});
  assert.equal(validVanillaStats([]),null);
+});
+test('item usage, planting and inventory gains never imply a meal',()=>{
+ const r={...row('Alice','remote',100,{foodEaten:1000}),date:'2026-11-07',inventoryGains:{'minecraft:carrot':100},vanillaStats:{'minecraft:used/minecraft:carrot':1000,'minecraft:picked_up/minecraft:bread':50}};
+ const p=consumptionTotals([r])[0];assert.equal(p.known,false);assert.equal(foodTotal(p.items),0);
+});
+test('completed meals remain split by item and count once per day snapshot',()=>{
+ const r=(date,at,foodConsumed)=>({player:'Alice',server:'remote',date,gameStatsAt:at,foodConsumed});
+ const p=consumptionTotals([r('2026-11-07',1,{'minecraft:bread':1}),r('2026-11-07',2,{'minecraft:bread':2,'minecraft:carrot':1}),r('2026-11-08',3,{'minecraft:cooked_beef':1})])[0];
+ assert.deepEqual(p.items,{'minecraft:bread':2,'minecraft:carrot':1,'minecraft:cooked_beef':1});assert.equal(foodTotal(p.items),4);assert.equal(p.days,2);
+});
+test('observed zero differs from old unknown food; singleplayer excluded',()=>{
+ const result=consumptionTotals([{player:'Old',server:'remote'},{player:'New',server:'remote',foodConsumed:{},date:'2026-11-07'},{player:'Local',server:'singleplayer',foodConsumed:{'minecraft:bread':100}}]);
+ assert.equal(result.find(p=>p.player==='Old').known,false);assert.equal(result.find(p=>p.player==='New').known,true);assert.equal(result.some(p=>p.player==='Local'),false);
+ assert.equal(validConsumedFood({'minecraft:bread':-1}),null);assert.equal(validConsumedFood({'minecraft:bread':1.5}),null);
 });

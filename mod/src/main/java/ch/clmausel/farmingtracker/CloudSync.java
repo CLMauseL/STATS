@@ -78,6 +78,10 @@ final class CloudSync {
                             JsonObject value = new JsonObject(); value.addProperty("stringValue", entry.getValue()); fields.add(entry.getKey(), value);
                         }
                         String name = "projects/" + PROJECT + "/databases/" + DATABASE + "/documents/daily/" + id;
+                        if (d.has("foodConsumed") && !d.get("foodConsumed").isJsonNull()) {
+                            JsonObject meals = new JsonObject(); meals.addProperty("stringValue", JSON.toJson(d.get("foodConsumed")));
+                            fields.add("foodConsumedJson", meals);
+                        }
                         if (d.has("gameStats") && !d.get("gameStats").isJsonNull()) {
                             JsonObject statsFields = new JsonObject();
                             for (var stat : d.getAsJsonObject("gameStats").entrySet()) {

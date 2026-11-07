@@ -16,6 +16,7 @@ public final class GameStatistics {
     private static ClientPacketListener connection;
     private static long nextRequest, sampledAt;
     private static boolean requested;
+    private static Long previousCake;
     private static Map<String, Long> latest;
     private static final Map<String, Long> vanilla = new TreeMap<>();
     private GameStatistics() {}
@@ -25,6 +26,7 @@ public final class GameStatistics {
             ? null : client.getConnection();
         if (current != connection) {
             connection = current; latest = null; sampledAt = 0; requested = false; vanilla.clear();
+            previousCake = null;
             nextRequest = System.nanoTime() + 1_000_000_000L;
         }
         if (current != null && System.nanoTime() >= nextRequest) {
@@ -54,6 +56,11 @@ public final class GameStatistics {
         values.put("fishCaught", (long) counter.getValue(Stats.CUSTOM, Stats.FISH_CAUGHT));
         values.put("trades", (long) counter.getValue(Stats.CUSTOM, Stats.TRADED_WITH_VILLAGER));
         values.put("cakeSlices", (long) counter.getValue(Stats.CUSTOM, Stats.EAT_CAKE_SLICE));
+        long cake = values.get("cakeSlices");
+        if (previousCake != null && cake > previousCake) FarmingTrackerClient.consumedFood("minecraft:cake", cake - previousCake);
+        previousCake = cake;
+        // Legacy field for older readers only: ITEM_USED may include planting.
+        // The food leaderboard exclusively uses observed daily foodConsumed.
         long food = 0;
         for (var item : BuiltInRegistries.ITEM) {
             if (item.components().has(DataComponents.FOOD)) food += Math.max(0, counter.getValue(Stats.ITEM_USED, item));

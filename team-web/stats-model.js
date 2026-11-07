@@ -25,7 +25,7 @@ export function playerTotals(rows) {
   }
   return [...players.values()];
 }
-export const foodTotal = stats => stats.foodEaten + stats.cakeSlices;
+export const foodTotal = items => Object.values(items).reduce((sum,n)=>sum+n,0);
 export const blocksTravelled = cm => cm / 100;
 export function rankPlayers(players, metric) {
   return [...players].sort((a,b)=>Number(b.known)-Number(a.known)
@@ -55,4 +55,26 @@ export function vanillaRows(rows) {
     totals.get(key).value+=value;
   }
   return [...totals.values()];
+}
+export function validConsumedFood(items) {
+  if(!items||typeof items!=='object'||Array.isArray(items))return null;
+  const entries=Object.entries(items);
+  if(entries.length>1024||!entries.every(([id,n])=>id.length<=128
+    && /^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(id)&&Number.isSafeInteger(n)&&n>=0&&n<=1e12))return null;
+  return Object.fromEntries(entries);
+}
+export function consumptionTotals(rows) {
+  rows=rows.filter(isMultiplayerDay);
+  const players=new Map([...new Set(rows.map(r=>r.player))].map(player=>[player,{player,known:false,items:{},days:0}]));
+  const days=new Map();
+  for(const row of rows){
+    const items=validConsumedFood(row.foodConsumed);if(!items)continue;
+    const key=JSON.stringify([row.player,row.server,row.date]);
+    if(!days.has(key)||(days.get(key).at||0)<=(row.gameStatsAt||0))days.set(key,{player:row.player,items,at:row.gameStatsAt});
+  }
+  for(const {player,items} of days.values()){
+    const p=players.get(player);p.known=true;p.days++;
+    for(const [id,n] of Object.entries(items))p.items[id]=(p.items[id]||0)+n;
+  }
+  return [...players.values()];
 }
