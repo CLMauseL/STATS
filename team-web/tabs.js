@@ -9,7 +9,7 @@ function renderAllStats(){
   const root=$('stats-all');
   if(!allToolbar){
     root.append(node('h2','Alle Minecraft-Statistiken'));
-    root.append(node('p','Alle vom Multiplayer-Server gelieferten Zähler. Suche nach Statistik-, Block-, Item- oder Mob-ID. Fehlende Zähler sind noch nicht übertragen; ein fehlender Eintrag bedeutet nicht automatisch null.'));
+    root.append(node('p','Alle vom Multiplayer-Server gelieferten Zähler sowie täglich erfasste Platzierungen seit Mod 0.4.3. Suche nach Statistik-, Block-, Item- oder Mob-ID. Fehlende Zähler sind noch nicht übertragen; ein fehlender Eintrag bedeutet nicht automatisch null.'));
     allToolbar=node('div',undefined,'nav');allSearch=node('input');allSearch.type='search';allSearch.placeholder='Suchen, z. B. diamond, jump, damage …';allSearch.setAttribute('aria-label','Statistiken durchsuchen');
     allGroup=node('select');allGroup.setAttribute('aria-label','Statistikkategorie');
     allPlayer=node('select');allPlayer.setAttribute('aria-label','Statistiken nach Spieler filtern');
@@ -93,6 +93,7 @@ const blockState={type:'holzkopf:placed',player:'*',item:'*'};
 function renderBlocks(){
  const root=$('stats-blocks');root.replaceChildren(node('h2','Welche Blöcke werden am meisten gesetzt oder abgebaut?'));
  root.append(node('p','Gesetzte Blöcke: erfolgreiche, vom Client gemeldete Platzierungen seit Mod 0.4.3, ohne rückwirkende Schätzung aus Item-Nutzung. Server können Platzierungen nachträglich ablehnen. Abgebaute Blöcke: Minecraft-Gesamtstände des Servers. Gezählt werden Platzierungsvorgänge, auch bei mehrteiligen Blöcken.','note'));
+ root.append(node('p',window.statsCloud.sourceLabel(),'note'));
  const entries=vanillaRows(window.statsCloud.getRows());
  const toolbar=node('div',undefined,'nav');root.append(toolbar);
  const select=(label,options,value,change)=>{const e=node('select');e.setAttribute('aria-label',label);for(const [v,l] of options){const o=node('option',l);o.value=v;e.append(o)}e.value=options.some(([v])=>v===value)?value:options[0][0];e.onchange=()=>{change(e.value);renderBlocks()};toolbar.append(e);return e.value};
