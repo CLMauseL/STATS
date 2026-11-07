@@ -1,6 +1,6 @@
 # SwissCraft Analytics – Wochenbericht / Lifetime MVP (v0.2 source)
 
-**Status:** Quellcode und lokale Webseite erstellt, Java-Mod **nicht kompiliert / nicht im Spiel getestet**. Die Webseite wurde auf JavaScript-Syntax geprüft. Minecraft Java 26.2 / Fabric. Eine zuverlässige Online-Mehrspieler-Synchronisierung gibt es noch nicht.
+**Aktuell:** Firebase-Anmeldung, private Teamfreigaben, automatische Mod-Synchronisierung und Live-Dashboard sind ergänzt. Einrichtung, Tests und Einschränkungen stehen in [FIREBASE.md](FIREBASE.md). Minecraft Java 26.2 / Fabric; ein Test im Spiel ist weiterhin erforderlich. Die folgenden Abschnitte beschreiben außerdem den bisherigen Offline-Import.
 
 ## Inhalt
 - `mod/` – eigenständige Fabric-Client-Mod. Nicht mit der Ancient Countdown Mod verwechseln.
@@ -27,11 +27,11 @@ Lohnsatz: **16 Diamanten je aktiver Arbeitsstunde**. Rechenwerte sind Vorschläg
 ## Wochenberichte
 Öffne `team-web/index.html` im Browser und importiere die `daily`-JSON-Dateien von jedem Teammitglied. Woche ist Montag–Sonntag. Spielerfilter, aktive Arbeitszeit, AFK, Lohn, Ressourcen und Lifetime-Vergleich werden aus den importierten Tagesdateien errechnet. `CSV` exportiert den gewählten Wochenbericht. Zum Test kannst du `Beispieldaten laden` klicken.
 
-Die statische Webseite verwendet nur lokalen Browser-Speicher; importierte Daten bleiben im jeweiligen Browser. **Noch KEINE geteilte Team-Cloud, kein automatischer Sync, keine Scheduler-/PDF-Berichtserstellung.** Dafür folgt später Firebase Auth/Firestore mit Team-Einladungen, Zugriffsregeln, täglichem Upload und Administrator-Freigaben. Auch ein gehosteter Web-Link müsste erst veröffentlicht werden.
+Die statische Webseite unterstützt jetzt zusätzlich private Firebase-Live-Daten. Offline-Importe bleiben im jeweiligen Browser und werden nicht hochgeladen. Anmeldung und Teamfreigabe siehe [FIREBASE.md](FIREBASE.md). Scheduler und PDF-Berichte sind nicht enthalten.
 
 ## Build
-1. Neues Repository für den Tracker erstellen; **nur den Inhalt von `mod/`** ins Repo-Root hochladen.
-2. Auf GitHub **Actions → Build Farming Tracker** ausführen.
+1. Dieses Repository verwenden; die Mod bleibt im Unterordner `mod/`.
+2. Auf GitHub **Actions → Build SwissCraft STATS** ausführen.
 3. Falls der Build erfolgreich ist, die normale `.jar`, nicht die `-sources.jar`, in den `mods`-Ordner der Fabric-26.2-Instanz legen.
 4. Die hier verwendeten 26.2-Mappings/Methoden sind **noch nicht gegen einen Build verifiziert**; Fehlerlogs können weitere Anpassungen nötig machen.
 

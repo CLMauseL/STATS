@@ -4,6 +4,7 @@ name: Build SwissCraft STATS
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -26,6 +27,8 @@ jobs:
 
       - name: Gradle installieren
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
 
       - name: Minecraft-Mod bauen
         run: gradle build --no-daemon

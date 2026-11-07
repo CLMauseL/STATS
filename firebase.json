@@ -1,0 +1,16 @@
+{
+  "firestore": {
+    "database": "live",
+    "edition": "enterprise",
+    "location": "europe-west6",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": { "providers": { "emailPassword": true, "anonymous": false } },
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "auth": { "port": 9099 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}
