@@ -64,7 +64,7 @@ function renderFood(players){
   const root=$('stats-food');root.replaceChildren(node('h2','Was wurde wirklich gegessen?'));
   root.append(node('p','Nur abgeschlossene Verzehrvorgänge in Multiplayer seit Mod 0.4.2. Aufheben, Herstellen, Anpflanzen, bloßes Benutzen und abgebrochenes Essen zählen nicht. Die alte Item-Nutzungsstatistik wird dafür nicht verwendet. Kuchen wird in Stücken gezählt.'));
   root.append(node('p',`${window.statsCloud.sourceLabel()} · ${players.filter(p=>p.known).reduce((n,p)=>n+p.days,0)} erfasste Spieler-Server-Tage`,'note'));
-  const summary=node('div',undefined,'scroll');summary.append(table(players,[['Tatsächlich verzehrt',foodTotal]],foodTotal));root.append(summary);
+  const summary=node('div',undefined,'scroll');root.append(summary);
   const toolbar=node('div',undefined,'nav');toolbar.style.margin='20px 0';
   const person=node('select');person.setAttribute('aria-label','Essen nach Spieler filtern');
   const food=node('select');food.setAttribute('aria-label','Lebensmittel auswählen');
@@ -73,6 +73,9 @@ function renderFood(players){
   const ids=[...new Set(players.flatMap(p=>Object.entries(p.items).filter(([,n])=>n>0).map(([id])=>id)))].sort((a,b)=>foodName(a).localeCompare(foodName(b),'de'));
   fill(food,ids.map(id=>[id,foodName(id)]),foodState.item,'Alle Lebensmittel');
   foodState.player=person.value;foodState.item=food.value;toolbar.append(person,food);root.append(toolbar);
+  const ranked=players.filter(p=>foodState.player==='*'||p.player===foodState.player)
+    .map(p=>({...p,stats:foodState.item==='*'?p.items:{[foodState.item]:p.items[foodState.item]||0}}));
+  summary.append(table(ranked,[[foodState.item==='*'?'Tatsächlich verzehrt':foodName(foodState.item)+' verzehrt',foodTotal]],foodTotal));
   person.onchange=()=>{foodState.player=person.value;renderFood(players)};food.onchange=()=>{foodState.item=food.value;renderFood(players)};
   const t=node('table'),head=node('thead'),tr=node('tr');for(const title of ['Lebensmittel','Spieler','Verzehrt'])tr.append(node('th',title));head.append(tr);t.append(head);
   const body=node('tbody');
@@ -124,3 +127,4 @@ buttons.forEach((button,i)=>{
 });
 activate(buttons.find(b=>b.dataset.tab===location.hash.slice(1))||buttons[0]);
 window.addEventListener('stats-data-change',renderCategories);renderCategories();
+
