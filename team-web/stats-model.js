@@ -85,3 +85,19 @@ export function consumptionTotals(rows) {
   }
   return [...players.values()];
 }
+
+// Historical food item-use counters: latest snapshot per player/server, never per-day sum.
+// These cannot distinguish consumption from planting for dual-purpose foods.
+export function historicalFoodTotals(rows, foodIds) {
+ const allowed=new Set(foodIds.filter(id=>id!=='minecraft:cake'));
+ const players=new Map(rows.filter(isMultiplayerDay).map(r=>[r.player,{player:r.player,known:false,items:{}}]));
+ for(const r of rows.filter(isMultiplayerDay))if(validVanillaStats(r.vanillaStats)&&Number.isSafeInteger(r.gameStatsAt)&&r.gameStatsAt>0)players.get(r.player).known=true;
+ for(const entry of vanillaRows(rows)) {
+  const [type,id]=entry.stat.split('/');
+  if(type==='minecraft:used'&&allowed.has(id))players.get(entry.player).items[id]=entry.value;
+ }
+ for(const p of playerTotals(rows))if(p.known){
+  const target=players.get(p.player);target.known=true;target.items['minecraft:cake']=p.stats.cakeSlices;
+ }
+ return [...players.values()];
+}

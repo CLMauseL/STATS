@@ -1,4 +1,4 @@
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,consumptionTotals} from './stats-model.js?v=0.4.3';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals} from './stats-model.js?v=0.4.3-food-total';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -63,9 +63,9 @@ const foodState={player:'*',item:'*'};
 const foodNames={'minecraft:bread':'Brot','minecraft:cooked_beef':'Steak','minecraft:beef':'Rohes Rindfleisch','minecraft:carrot':'Karotte','minecraft:golden_carrot':'Goldene Karotte','minecraft:apple':'Apfel','minecraft:golden_apple':'Goldener Apfel','minecraft:enchanted_golden_apple':'Verzauberter goldener Apfel','minecraft:potato':'Kartoffel','minecraft:baked_potato':'Ofenkartoffel','minecraft:poisonous_potato':'Giftige Kartoffel','minecraft:cooked_porkchop':'Gebratenes Schweinefleisch','minecraft:porkchop':'Rohes Schweinefleisch','minecraft:cooked_chicken':'Gebratenes Hühnchen','minecraft:chicken':'Rohes Hühnchen','minecraft:cooked_mutton':'Gebratenes Hammelfleisch','minecraft:mutton':'Rohes Hammelfleisch','minecraft:cooked_rabbit':'Gebratenes Kaninchen','minecraft:rabbit':'Rohes Kaninchen','minecraft:cooked_salmon':'Gebratener Lachs','minecraft:salmon':'Roher Lachs','minecraft:cooked_cod':'Gebratener Kabeljau','minecraft:cod':'Roher Kabeljau','minecraft:sweet_berries':'Süßbeeren','minecraft:glow_berries':'Leuchtbeeren','minecraft:melon_slice':'Melonenscheibe','minecraft:cookie':'Keks','minecraft:pumpkin_pie':'Kürbiskuchen','minecraft:cake':'Kuchenstück','minecraft:honey_bottle':'Honigflasche','minecraft:dried_kelp':'Getrockneter Seetang','minecraft:rotten_flesh':'Verrottetes Fleisch','minecraft:spider_eye':'Spinnenauge','minecraft:chorus_fruit':'Chorusfrucht','minecraft:mushroom_stew':'Pilzsuppe','minecraft:beetroot_soup':'Borschtsch','minecraft:beetroot':'Rote Bete','minecraft:rabbit_stew':'Kaninchenragout','minecraft:suspicious_stew':'Verdächtige Suppe','minecraft:tropical_fish':'Tropenfisch','minecraft:pufferfish':'Kugelfisch'};
 const foodName=id=>foodNames[id]||id.split(':').pop().replaceAll('_',' ');
 function renderFood(players){
-  const root=$('stats-food');root.replaceChildren(node('h2','Was wurde wirklich gegessen?'));
-  root.append(node('p','Nur abgeschlossene Verzehrvorgänge in Multiplayer seit Mod 0.4.2. Aufheben, Herstellen, Anpflanzen, bloßes Benutzen und abgebrochenes Essen zählen nicht. Die alte Item-Nutzungsstatistik wird dafür nicht verwendet. Kuchen wird in Stücken gezählt.'));
-  root.append(node('p',`${window.statsCloud.sourceLabel()} · ${players.filter(p=>p.known).reduce((n,p)=>n+p.days,0)} erfasste Spieler-Server-Tage`,'note'));
+  const root=$('stats-food');root.replaceChildren(node('h2','Essen · Gesamtstatistik'));
+  root.append(node('p','Gesamtstände der vorhandenen Minecraft-Serverhistorie pro Lebensmittel und Spieler, einschließlich der Zeit vor der Mod. Keine Wochenbegrenzung. Minecraft zählt Lebensmittel als „benutzt“; bei z. B. Karotten kann darin auch Anpflanzen enthalten sein. Kuchen zeigt gegessene Stücke, nicht gesetzte Kuchen.'));
+  root.append(node('p',`${window.statsCloud.sourceLabel()} · ${players.filter(p=>p.known).length} Spieler mit Gesamtständen`,'note'));
   const summary=node('div',undefined,'scroll');root.append(summary);
   const toolbar=node('div',undefined,'nav');toolbar.style.margin='20px 0';
   const person=node('select');person.setAttribute('aria-label','Essen nach Spieler filtern');
@@ -77,16 +77,16 @@ function renderFood(players){
   foodState.player=person.value;foodState.item=food.value;toolbar.append(person,food);root.append(toolbar);
   const ranked=players.filter(p=>foodState.player==='*'||p.player===foodState.player)
     .map(p=>({...p,stats:foodState.item==='*'?p.items:{[foodState.item]:p.items[foodState.item]||0}}));
-  summary.append(table(ranked,[[foodState.item==='*'?'Tatsächlich verzehrt':foodName(foodState.item)+' verzehrt',foodTotal]],foodTotal));
+  summary.append(table(ranked,[[foodState.item==='*'?'Insgesamt benutzt / Kuchenstücke':foodName(foodState.item)+' insgesamt',foodTotal]],foodTotal));
   person.onchange=()=>{foodState.player=person.value;renderFood(players)};food.onchange=()=>{foodState.item=food.value;renderFood(players)};
-  const t=node('table'),head=node('thead'),tr=node('tr');for(const title of ['Lebensmittel','Spieler','Verzehrt'])tr.append(node('th',title));head.append(tr);t.append(head);
+  const t=node('table'),head=node('thead'),tr=node('tr');for(const title of ['Lebensmittel','Spieler','Insgesamt benutzt / Kuchenstücke'])tr.append(node('th',title));head.append(tr);t.append(head);
   const body=node('tbody');
   const entries=players.flatMap(p=>Object.entries(p.items).map(([id,count])=>({id,count,player:p.player})))
     .filter(x=>x.count>0&&(foodState.player==='*'||x.player===foodState.player)&&(foodState.item==='*'||x.id===foodState.item))
     .sort((a,b)=>foodName(a.id).localeCompare(foodName(b.id),'de')||b.count-a.count||a.player.localeCompare(b.player,'de'));
   for(const entry of entries){const row=node('tr'),name=node('td',foodName(entry.id));name.title=entry.id;row.append(name,node('td',entry.player),node('td',format(entry.count)));body.append(row)}
   t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
-  if(!entries.length)root.append(node('p','Noch keine abgeschlossenen Essvorgänge für diese Auswahl erfasst. Alte Daten ohne Verzehr-Aufzeichnung bleiben unbekannt.','empty'));
+  if(!entries.length)root.append(node('p','Noch keine historischen Lebensmittel-Zähler für diese Auswahl übertragen.','empty'));
 }
 
 const blockState={type:'holzkopf:placed',player:'*',item:'*'};
@@ -113,7 +113,7 @@ function renderCategories(){
   renderAllStats();
   renderBlocks();
   const rows=window.statsCloud.getRows(),players=playerTotals(rows),known=players.filter(p=>p.known);
-  const foodPlayers=consumptionTotals(rows).map(p=>({...p,stats:p.items}));
+  const foodPlayers=historicalFoodTotals(rows,Object.keys(foodNames)).map(p=>({...p,stats:p.items}));
   renderFood(foodPlayers);
   for(const [id,category] of Object.entries(categories)){
     const target=$('stats-'+id);target.replaceChildren();target.append(node('h2',category.title));
@@ -128,7 +128,7 @@ function renderCategories(){
   }
   const target=$('stats-rankings');target.replaceChildren(node('h2','Die Holzkopfarmy-Rekorde'));
   const grid=node('div',undefined,'record-grid');
-  const awards=[['Meiste Tode',s=>s.deaths,'Tode'],['Größter Hunger',foodTotal,'Portionen'],['Meiste Sprünge',s=>s.jumps,'Sprünge'],['Längste Laufstrecke',s=>blocksTravelled(s.walkCm+s.sprintCm),'Blöcke'],['Meiste Mobs besiegt',s=>s.mobKills,'Mobs'],['Meiste Tiere gezüchtet',s=>s.breeding,'Züchtungen'],['Meiste Fische gefangen',s=>s.fishCaught,'Fische'],['Meiste Handelsgeschäfte',s=>s.trades,'Handelsgeschäfte']];
+  const awards=[['Meiste Tode',s=>s.deaths,'Tode'],['Größter Hunger',foodTotal,'Lebensmittel-Nutzungen / Kuchenstücke'],['Meiste Sprünge',s=>s.jumps,'Sprünge'],['Längste Laufstrecke',s=>blocksTravelled(s.walkCm+s.sprintCm),'Blöcke'],['Meiste Mobs besiegt',s=>s.mobKills,'Mobs'],['Meiste Tiere gezüchtet',s=>s.breeding,'Züchtungen'],['Meiste Fische gefangen',s=>s.fishCaught,'Fische'],['Meiste Handelsgeschäfte',s=>s.trades,'Handelsgeschäfte']];
   for(const [label,metric,unit] of awards){
     const card=node('article',undefined,'metric');card.append(node('span',label));
     const sorted=rankPlayers(label==='Größter Hunger'?foodPlayers.filter(p=>p.known):known,metric),best=sorted[0];

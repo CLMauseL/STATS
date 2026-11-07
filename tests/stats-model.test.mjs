@@ -62,3 +62,10 @@ test('daily placements sum days while vanilla cumulative counters use latest sna
  assert.equal(values.find(x=>x.stat.startsWith('holzkopf:placed/')).value,8);
  assert.equal(values.find(x=>x.stat.startsWith('minecraft:mined/')).value,30);
 });
+
+test('historical food totals include pre-mod counts once per server, separate cake slices',async()=>{
+ const {historicalFoodTotals}=await import('../team-web/stats-model.js');
+ const r=(server,at,bread,carrot)=>({...row('Alice',server,at,{cakeSlices:2}),date:'2026-11-07',foodConsumed:{'minecraft:bread':1},vanillaStats:{'minecraft:used/minecraft:bread':bread,'minecraft:used/minecraft:carrot':carrot,'minecraft:used/minecraft:cake':99,'minecraft:used/minecraft:stone':1000}});
+ const p=historicalFoodTotals([r('one',1,50,5),r('one',2,100,10),r('two',3,20,3),r('singleplayer',4,999,999)],['minecraft:bread','minecraft:carrot','minecraft:cake'])[0];
+ assert.equal(p.known,true);assert.deepEqual(p.items,{'minecraft:bread':120,'minecraft:carrot':13,'minecraft:cake':4});
+});
