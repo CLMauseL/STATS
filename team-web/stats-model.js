@@ -101,3 +101,14 @@ export function historicalFoodTotals(rows, foodIds) {
  }
  return [...players.values()];
 }
+
+export function minecraftDisplay(stat, value) {
+ const [type,id]=stat.split('/');
+ if(type!=='minecraft:custom')return {value,unit:'Anzahl'};
+ if(id.endsWith('_one_cm'))return value>=100000?{value:value/100000,unit:'km'}:value>=100?{value:value/100,unit:'m'}:{value,unit:'cm'};
+ if(id.startsWith('minecraft:damage_'))return {value:value/10,unit:'Schadenspunkte'};
+ if(['minecraft:play_time','minecraft:total_world_time','minecraft:time_since_death','minecraft:time_since_rest','minecraft:sneak_time'].includes(id)){
+  const seconds=value/20;return seconds>=86400?{value:seconds/86400,unit:'Tage'}:seconds>=3600?{value:seconds/3600,unit:'Stunden'}:seconds>=60?{value:seconds/60,unit:'Minuten'}:{value:seconds,unit:'Sekunden'};
+ }
+ return {value,unit:'Anzahl'};
+}

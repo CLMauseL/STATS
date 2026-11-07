@@ -1,19 +1,25 @@
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals} from './stats-model.js?v=0.4.3-food-total';
+import {minecraftNames} from './minecraft-names.js?v=mc-statistics';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay} from './stats-model.js?v=mc-statistics';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
-const allState={search:'',group:'*',player:'*',page:0,sort:'value'};
+const allState={search:'',group:'*',player:'*',page:0,sort:'name',section:'general'};
 const labels={'holzkopf:placed':'Blöcke gesetzt','minecraft:custom':'Allgemein','minecraft:mined':'Blöcke abgebaut','minecraft:crafted':'Items hergestellt','minecraft:used':'Items benutzt','minecraft:broken':'Werkzeuge zerbrochen','minecraft:picked_up':'Items aufgesammelt','minecraft:dropped':'Items weggeworfen','minecraft:killed':'Mobs besiegt','minecraft:killed_by':'Getötet durch'};
+let sectionButtons;
+const statSection=type=>type==='minecraft:custom'?'general':['minecraft:killed','minecraft:killed_by'].includes(type)?'mobs':'items';
+function statName(stat){const [type,id]=stat.split('/'),name=id.replace(':','.');const keys=type==='minecraft:custom'?['stat.'+name]:statSection(type)==='mobs'?['entity.'+name]:['item.'+name,'block.'+name];return keys.map(k=>minecraftNames[k]).find(Boolean)||id}
 let allToolbar,allSearch,allGroup,allPlayer,allTable,allCount,allPrev,allNext,allSort;
 function renderAllStats(){
   const root=$('stats-all');
   if(!allToolbar){
     root.append(node('h2','Alle Minecraft-Statistiken'));
-    root.append(node('p','Alle vom Multiplayer-Server gelieferten Zähler sowie täglich erfasste Platzierungen seit Mod 0.4.3. Suche nach Statistik-, Block-, Item- oder Mob-ID. Fehlende Zähler sind noch nicht übertragen; ein fehlender Eintrag bedeutet nicht automatisch null.'));
+    root.append(node('p','Direkt aus der Minecraft-Statistik des Multiplayer-Servers: Allgemein, Items und Mobs, einschließlich vorhandener Historie. Bezeichnungen wie im englischen Minecraft. Fehlende Einträge wurden noch nicht übertragen. Eigene Platzierungszählungen stehen separat unter Blöcke.'));
+    sectionButtons=node('div',undefined,'nav');for(const [id,label] of [['general','Allgemein (General)'],['items','Items'],['mobs','Mobs']]){const b=node('button',label,'button alt');b.dataset.section=id;b.onclick=()=>{allState.section=id;allState.group='*';allState.page=0;renderAllStats()};sectionButtons.append(b)}root.append(sectionButtons);
     allToolbar=node('div',undefined,'nav');allSearch=node('input');allSearch.type='search';allSearch.placeholder='Suchen, z. B. diamond, jump, damage …';allSearch.setAttribute('aria-label','Statistiken durchsuchen');
     allGroup=node('select');allGroup.setAttribute('aria-label','Statistikkategorie');
     allPlayer=node('select');allPlayer.setAttribute('aria-label','Statistiken nach Spieler filtern');
     allSort=node('select');allSort.setAttribute('aria-label','Statistiken sortieren');for(const [value,label] of [['value','Höchster Wert zuerst'],['name','Nach Statistik / ID']]){const o=node('option',label);o.value=value;allSort.append(o)}
+    allSort.value=allState.sort;
     allSort.onchange=()=>{allState.sort=allSort.value;allState.page=0;renderAllStats()};
     allToolbar.append(allSearch,allGroup,allPlayer,allSort);root.append(allToolbar);
     allCount=node('p',undefined,'note');allTable=node('div',undefined,'scroll');root.append(allCount,allTable);
@@ -23,7 +29,8 @@ function renderAllStats(){
     allPlayer.onchange=()=>{allState.player=allPlayer.value;allState.page=0;renderAllStats()};
     allPrev.onclick=()=>{allState.page--;renderAllStats()};allNext.onclick=()=>{allState.page++;renderAllStats()};
   }
-  const entries=vanillaRows(window.statsCloud.getRows());
+  for(const b of sectionButtons.children)b.setAttribute('aria-pressed',String(b.dataset.section===allState.section));
+  const entries=vanillaRows(window.statsCloud.getRows()).filter(e=>e.stat.startsWith('minecraft:')&&statSection(e.stat.split('/')[0])===allState.section);
   const fill=(select,values,selected,first)=>{select.replaceChildren();for(const [value,label] of [['*',first],...values]){const o=node('option',label);o.value=value;select.append(o)}select.value=values.some(([v])=>v===selected)?selected:'*';};
   fill(allGroup,[...new Set(entries.map(x=>x.stat.split('/')[0]))].sort().map(k=>[k,labels[k]||k]),allState.group,'Alle Kategorien');
   fill(allPlayer,[...new Set(entries.map(x=>x.player))].sort().map(p=>[p,p]),allState.player,'Alle Spieler');
@@ -31,14 +38,14 @@ function renderAllStats(){
   const search=allState.search.trim().toLowerCase();
   const filtered=entries.filter(x=>(allState.group==='*'||x.stat.split('/')[0]===allState.group)
     &&(allState.player==='*'||x.player===allState.player)
-    &&(!search||(x.stat+' '+x.player+' '+(labels[x.stat.split('/')[0]]||'')).toLowerCase().includes(search)))
-    .sort((a,b)=>allState.sort==='value'?b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player):a.stat.localeCompare(b.stat)||b.value-a.value||a.player.localeCompare(b.player));
+    &&(!search||(x.stat+' '+statName(x.stat)+' '+x.player+' '+(labels[x.stat.split('/')[0]]||'')).toLowerCase().includes(search)))
+    .sort((a,b)=>allState.sort==='value'?b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player):statName(a.stat).localeCompare(statName(b.stat))||b.value-a.value||a.player.localeCompare(b.player));
   const size=100;allState.page=Math.max(0,Math.min(allState.page,Math.ceil(filtered.length/size)-1));
-  const table=node('table'),head=node('thead'),h=node('tr');for(const title of ['Kategorie','Statistik / ID','Spieler','Wert','Einheit'])h.append(node('th',title));head.append(h);table.append(head);
+  const table=node('table'),head=node('thead'),h=node('tr');for(const title of ['Kategorie','Minecraft-Statistik','Spieler','Wert','Einheit'])h.append(node('th',title));head.append(h);table.append(head);
   const body=node('tbody');
   for(const entry of filtered.slice(allState.page*size,(allState.page+1)*size)){
-    const type=entry.stat.split('/')[0],id=entry.stat.slice(type.length+1),distance=type==='minecraft:custom'&&id.endsWith('_one_cm');
-    const tr=node('tr');for(const v of [labels[type]||type,id,entry.player,format(distance?entry.value/100:entry.value),distance?'Blöcke':'Minecraft-Zähler'])tr.append(node('td',v));body.append(tr);
+    const type=entry.stat.split('/')[0],display=minecraftDisplay(entry.stat,entry.value);
+    const tr=node('tr');tr.title=entry.stat;for(const v of [labels[type]||type,statName(entry.stat),entry.player,format(display.value),display.unit])tr.append(node('td',v));body.append(tr);
   }table.append(body);allTable.replaceChildren(table);
   allPrev.disabled=allState.page===0;allNext.disabled=(allState.page+1)*size>=filtered.length;
   allCount.textContent=entries.length?`${window.statsCloud.sourceLabel()} · ${filtered.length} Treffer · Seite ${allState.page+1} / ${Math.max(1,Math.ceil(filtered.length/size))}`:'Noch keine vollständigen Minecraft-Statistiken übertragen. Mod 0.4.3 installieren und einem Multiplayer-Server beitreten.';

@@ -69,3 +69,11 @@ test('historical food totals include pre-mod counts once per server, separate ca
  const p=historicalFoodTotals([r('one',1,50,5),r('one',2,100,10),r('two',3,20,3),r('singleplayer',4,999,999)],['minecraft:bread','minecraft:carrot','minecraft:cake'])[0];
  assert.equal(p.known,true);assert.deepEqual(p.items,{'minecraft:bread':120,'minecraft:carrot':13,'minecraft:cake':4});
 });
+
+test('Minecraft statistics use native distance, damage and tick time units',async()=>{
+ const {minecraftDisplay}=await import('../team-web/stats-model.js');
+ assert.deepEqual(minecraftDisplay('minecraft:custom/minecraft:walk_one_cm',13517000),{value:135.17,unit:'km'});
+ assert.deepEqual(minecraftDisplay('minecraft:custom/minecraft:damage_dealt',648373),{value:64837.3,unit:'Schadenspunkte'});
+ assert.deepEqual(minecraftDisplay('minecraft:custom/minecraft:play_time',1728000),{value:1,unit:'Tage'});
+ assert.deepEqual(minecraftDisplay('minecraft:used/minecraft:bread',120),{value:120,unit:'Anzahl'});
+});
