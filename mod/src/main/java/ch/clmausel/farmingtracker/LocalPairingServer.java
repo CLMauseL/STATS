@@ -60,7 +60,7 @@ public final class LocalPairingServer implements AutoCloseable {
                     String value=incoming.get(key).getAsString();if(value.isBlank()||value.length()>(key.equals("refreshToken")?8192:256))throw new IllegalArgumentException();config.addProperty(key,value);
                 }
             }catch(Exception invalid){respond(request,400);return;}
-            Files.createDirectories(directory);Path temporary=directory.resolve("cloud-session.json.tmp");
+            Files.createDirectories(directory);Path temporary=Files.createTempFile(directory,"pairing-", ".tmp");
             Files.writeString(temporary,new Gson().toJson(config),StandardCharsets.UTF_8);
             try{Files.move(temporary,directory.resolve("cloud-session.json"),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}
             catch(AtomicMoveNotSupportedException unsupported){Files.move(temporary,directory.resolve("cloud-session.json"),StandardCopyOption.REPLACE_EXISTING);}

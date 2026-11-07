@@ -3,6 +3,8 @@ package ch.clmausel.farmingtracker.mixin;
 import ch.clmausel.farmingtracker.PairingBridge;
 import ch.clmausel.farmingtracker.CloudStatus;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -18,6 +20,6 @@ abstract class ConnectionMenuMixin extends Screen {
     @Inject(method="init",at=@At("TAIL"))
     private void holzkopf$connection(CallbackInfo ci){
         addRenderableWidget(Button.builder(Component.literal("Holzkopfarmy verbinden"),b->PairingBridge.open()).bounds(8,8,190,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Verbindungsstatus"),b->{b.setMessage(Component.literal(CloudStatus.message));}).bounds(8,32,Math.max(190,Math.min(width-16,360)),20).build());
+        addRenderableWidget(Button.builder(Component.literal("Verbindungsstatus"),b->{var client=Minecraft.getInstance();client.setScreen(new AlertScreen(()->client.setScreen(this),Component.literal("Holzkopfarmy · Verbindungsstatus"),Component.literal(CloudStatus.message)));}).bounds(8,32,Math.max(190,Math.min(width-16,360)),20).build());
     }
 }
