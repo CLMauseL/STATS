@@ -27,6 +27,7 @@ import java.util.UUID;
 
 /** Client-only tracker. Inventory increases are estimates, not authoritative pickup events. */
 public final class FarmingTrackerClient implements ClientModInitializer {
+    private static FarmingTrackerClient instance;
     private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
     private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("farmingtracker", "controls"));
     private static final Path OUT = FabricLoader.getInstance().getConfigDir().resolve("farming-tracker");
@@ -53,6 +54,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        instance = this;
         new CloudSync(OUT).start();
         ClientPlayerBlockBreakEvents.AFTER.register((world, player, pos, state) -> {
             Minecraft client = Minecraft.getInstance();
@@ -64,6 +66,17 @@ public final class FarmingTrackerClient implements ClientModInitializer {
             active.totalBlocks++;
         });
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
+    }
+
+    public static void consumedFood(String item, long count) {
+        var client = Minecraft.getInstance();
+        if (instance == null || client.player == null || count <= 0
+            || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) return;
+        instance.lifetime.ensureDay(client);
+        instance.lifetime.day.foodConsumed.merge(item, count, Long::sum);
+        // A completed meal proves activity and is persisted immediately for retries.
+        instance.lifetime.blockActivity = true;
+        instance.lifetime.save(false);
     }
 
     private void tick(Minecraft client) {
@@ -222,7 +235,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
             blockActivity = true;
         }
 
-        void tick(Minecraft client, Map<String, Integer> inventory) {
+        private void ensureDay(Minecraft client) {
             String server = client.getCurrentServer() == null ? "singleplayer" : client.getCurrentServer().ip;
             String player = client.player.getName().getString();
             String date = LocalDate.now().toString();
@@ -230,6 +243,11 @@ public final class FarmingTrackerClient implements ClientModInitializer {
                 leave();
                 day = readDay(date, player, server);
             }
+            if (day.foodConsumed == null) day.foodConsumed = new TreeMap<>();
+        }
+
+        void tick(Minecraft client, Map<String, Integer> inventory) {
+            ensureDay(client);
             long now = System.nanoTime();
             double nx = client.player.getX(), ny = client.player.getY(), nz = client.player.getZ();
             float newYaw = client.player.getYRot(), newPitch = client.player.getXRot();
@@ -329,6 +347,8 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         // Cumulative vanilla server totals. Keep separate from day-only counters.
         Map<String, Long> gameStats;
         Map<String, Long> vanillaStats;
+        // Daily observed completed meals, not cumulative ITEM_USED statistics.
+        Map<String, Long> foodConsumed;
         long gameStatsAt;
         transient Path file;
         transient long saveTick;

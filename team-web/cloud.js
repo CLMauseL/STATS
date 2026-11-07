@@ -69,7 +69,10 @@ async function connect(user) {
       for (const item of snapshot.docs) {
         try {
           const d = item.data();
+          let meals = null;
+          try { meals = d.foodConsumedJson ? JSON.parse(d.foodConsumedJson) : null; } catch { /* Optional malformed food data stays unknown. */ }
           rows.push(window.statsCloud.validate({...d, blocks: JSON.parse(d.blocksJson),
+            foodConsumed: meals,
             vanillaStats: d.vanillaStatsJson ? JSON.parse(d.vanillaStatsJson) : null,
             inventoryGains: JSON.parse(d.inventoryGainsJson)}));
         } catch { /* Ignore corrupt client payloads, never render raw HTML. */ }

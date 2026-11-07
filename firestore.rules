@@ -37,11 +37,15 @@ service cloud.firestore {
       return !('vanillaStatsJson' in d) || (('gameStats' in d)
         && d.vanillaStatsJson is string && d.vanillaStatsJson.size() <= 524288);
     }
+    function optionalFood(d) {
+      return !('foodConsumedJson' in d) || (d.foodConsumedJson is string && d.foodConsumedJson.size() <= 65536);
+    }
     function validDaily(d, id) {
       return d.keys().hasAll(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
-        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt','gameStats','gameStatsAt','vanillaStatsJson'])
+        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt','gameStats','gameStatsAt','vanillaStatsJson','foodConsumedJson'])
         && optionalGameStats(d)
         && optionalVanillaStats(d)
+        && optionalFood(d)
         && d.schema == 2 && d.type == 'daily'
         && d.ownerUid is string && d.ownerUid.size() <= 128 && uidUnchanged(d)
         && id == d.ownerUid + '_' + hashing.sha256(d.server + '_' + d.date).toHexString().lower()

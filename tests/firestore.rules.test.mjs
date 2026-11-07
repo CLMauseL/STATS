@@ -87,3 +87,10 @@ test('legacy singleplayer uploads denied, bounded all-stat snapshot accepted',as
   await assertFails(setDoc(ref,{...full,vanillaStatsJson:'x'.repeat(524289)}));
   await assertFails(setDoc(ref,{...full,vanillaStatsJson:{}}));
 });
+test('completed-food payload is bounded, optional and scoped to its owner',async()=>{
+ const ref=doc(db(),'daily',id());const full={...data(),foodConsumedJson:'{"minecraft:bread":2}'};
+ await assertSucceeds(setDoc(ref,full));
+ await assertFails(updateDoc(ref,{foodConsumedJson:'x'.repeat(65537),updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(ref,{foodConsumedJson:{},updatedAt:serverTimestamp()}));
+ await assertFails(setDoc(doc(db('bob'),'daily',id()),{...full,ownerUid:'bob',player:'Bob'}));
+});
