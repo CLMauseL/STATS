@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "farmingtracker",
+  "version": "0.2.0",
+  "name": "SwissCraft Farming Tracker",
+  "description": "Client-only Minecraft 26.2 farming + lifetime active/AFK statistics for weekly team reports",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ch.clmausel.farmingtracker.FarmingTrackerClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

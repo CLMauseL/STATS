@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "type": "daily",
+  "player": "Mitspieler",
+  "date": "2026-11-06",
+  "server": "example-server",
+  "onlineMs": 10800000,
+  "afkMs": 600000,
+  "workMs": 10200000,
+  "blocks": {
+    "minecraft:end_stone": 300
+  },
+  "inventoryGains": {
+    "minecraft:ender_pearl": 46
+  },
+  "deaths": null,
+  "breeding": null
+}
