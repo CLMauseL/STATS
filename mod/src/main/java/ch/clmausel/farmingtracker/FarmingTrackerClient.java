@@ -111,8 +111,9 @@ public final class FarmingTrackerClient implements ClientModInitializer {
                     double hours = Math.max(1, active.activeMs) / 3_600_000.0;
                     String s = String.format("§a⛏ %d Blöcke (%.1f/h) §7| §b+%d Items (%.1f/h) §7| §f%s",
                         active.totalBlocks, active.totalBlocks / hours,
-                        active.totalInventoryGains, active.totalInventoryGains / hours, clock(active.activeMs));
-                    client.player.displayClientMessage(Component.literal(s), true);
+                          active.totalInventoryGains, active.totalInventoryGains / hours, clock(active.activeMs));
+                          client.player.sendOverlayMessage(Component.literal(s));
+
                 }
             }
             if (++saveTicks >= 200) { saveTicks = 0; saveSession(false); }
@@ -177,7 +178,8 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         return String.format("%02d:%02d:%02d", sec/3600, (sec/60)%60, sec%60);
     }
     private static void announce(Minecraft client, String message) {
-        if (client.player != null) client.player.displayClientMessage(Component.literal(message), false);
+       if (client.player != null) client.player.sendSystemMessage(Component.literal(message));
+
     }
     /**
      * Conservative client-side estimator: movement, looking around, inventory change or block breaking
