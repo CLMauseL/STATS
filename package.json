@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/stats-model.test.mjs",
+    "test": "node --test tests/stats-model.test.mjs tests/pairing.test.mjs",
     "test:rules": "firebase emulators:exec --project demo-holzkopf --only firestore \"node --test tests/firestore.rules.test.mjs\"",
     "check:web": "node scripts/check-web.mjs"
   },

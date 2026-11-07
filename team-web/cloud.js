@@ -1,3 +1,4 @@
+import {parsePairingLink,completePairing} from './pairing-client.js?v=easy-login-050';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js';
 import { getAuth, setPersistence, browserSessionPersistence, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut,
@@ -6,6 +7,9 @@ import { getFirestore, doc, collection, onSnapshot } from 'https://www.gstatic.c
 import { firebaseConfig, databaseId } from './firebase-config.js';
 
 const el = id => document.getElementById(id);
+const pairing=parsePairingLink(window.statsCloud.pairingLink);
+let paired=false;
+if(pairing)el('bridgeStatus').textContent='Minecraft läuft als '+pairing.player+'. Mit dem passenden Teamkonto anmelden und diese Mod verbinden.';
 const auth = getAuth(initializeApp(firebaseConfig));
 const db = getFirestore(auth.app, databaseId);
 await setPersistence(auth, browserSessionPersistence);
@@ -17,7 +21,7 @@ const status = text => {
 };
 const enableLive = () => { el('cloudMode').checked = true; window.statsCloud.mode(true); };
 const clear = () => {
-  stopMember(); stopDays(); membership = null; el('pairMod').disabled = true;
+  stopMember(); stopDays(); membership = null; el('pairMod').disabled = true; el('bridgeConnect').disabled=true;
   window.statsCloud.replace([]);
 };
 async function action(fn) {
@@ -28,6 +32,7 @@ async function action(fn) {
   finally {
     buttons.forEach(b => { b.disabled = false; });
     el('pairMod').disabled = !membership || !auth.currentUser?.emailVerified;
+    el('bridgeConnect').disabled=paired||!pairing||!membership||!auth.currentUser?.emailVerified||membership.player!==pairing.player;
     el('cloudPassword').value = '';
   }
 }
@@ -68,6 +73,8 @@ async function connect(user) {
       status('Angemeldet. Teamfreigabe durch den Projektinhaber erforderlich.'); return;
     }
     el('pairMod').disabled = false;
+    el('bridgeConnect').disabled=paired||!pairing||membership.player!==pairing.player;
+    if(pairing&&!paired)el('bridgeStatus').textContent=membership.player===pairing.player?'Bereit: Minecraft und Konto gehören zu '+pairing.player+'. Jetzt verbinden.':'Dieses Konto gehört zu '+membership.player+', die Mod läuft als '+pairing.player+'. Bitte mit dem passenden Konto anmelden.';
     enableLive();
     // Core listener is intentional: this dashboard requires real-time updates.
     stopDays = onSnapshot(collection(db, 'daily'), snapshot => {
@@ -109,4 +116,24 @@ el('pairMod').onclick = () => action(async () => {
   const a = document.createElement('a'); a.href = url; a.download = 'cloud-session.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   status('Datei in .minecraft/config/farming-tracker/cloud-session.json ablegen. Downloadkopie danach löschen. Die laufende Mod verbindet sich innerhalb von 30 Sekunden.');
+});
+
+el('bridgeConnect').onclick=()=>action(async()=>{
+ const user=auth.currentUser;
+ if(!pairing||!user?.emailVerified||!membership||membership.player!==pairing.player)return;
+ const signedInAt=Date.parse(user.metadata.lastSignInTime);
+ if(!Number.isFinite(signedInAt)||Date.now()-signedInAt>300000){
+  if(!el('cloudPassword').value){el('bridgeStatus').textContent='Zur Bestätigung bitte dein Passwort im Anmeldefeld erneut eingeben und nochmals verbinden.';return;}
+  await reauthenticateWithCredential(user,EmailAuthProvider.credential(user.email,el('cloudPassword').value));
+ }
+ await user.getIdToken(true);
+ const config={projectId:firebaseConfig.projectId,databaseId,apiKey:firebaseConfig.apiKey,uid:user.uid,player:membership.player,refreshToken:user.refreshToken};
+ try{
+  await completePairing(pairing,config);paired=true;
+  const clean=new URL(location.href);clean.searchParams.delete('pairPort');clean.searchParams.delete('player');clean.hash='team';history.replaceState(null,'',clean);
+  el('bridgeStatus').textContent='Verbunden! Die Mod hat deine Anmeldung gespeichert. Zum Server zurückkehren; der erste Upload folgt innerhalb einer Minute.';
+  el('bridgeConnect').textContent='Mod verbunden ✓';enableLive();
+ }catch(error){
+  el('bridgeStatus').textContent=error.message==='expired'?'Die Verbindung ist abgelaufen. In Minecraft erneut „Holzkopfarmy verbinden“ wählen.':'Die gestartete Mod ist nicht erreichbar. Minecraft geöffnet lassen und erneut „Holzkopfarmy verbinden“ wählen. Falls dein Browser nach lokalem Netzwerkzugriff fragt, für diese Verbindung erlauben. Alternativ „Verbindungsdatei herunterladen“ verwenden.';
+ }
 });

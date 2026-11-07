@@ -35,6 +35,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
     private final KeyMapping startStop = bind("startstop", GLFW.GLFW_KEY_F8);
     private final KeyMapping pause = bind("pause", GLFW.GLFW_KEY_F9);
     private final KeyMapping hud = bind("hud", GLFW.GLFW_KEY_F7);
+    private final KeyMapping connect = bind("connect", GLFW.GLFW_KEY_F6);
     private final KeyMapping export = bind("export", GLFW.GLFW_KEY_F10);
 
     private Session active;
@@ -92,6 +93,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
     }
 
     private void tick(Minecraft client) {
+        while (connect.consumeClick()) PairingBridge.open();
         GameStatistics.tick(client);
         if (client.player == null || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) {
             lifetime.leave();
