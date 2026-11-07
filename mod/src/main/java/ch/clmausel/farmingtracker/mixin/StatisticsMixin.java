@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class StatisticsMixin {
     @Inject(method = "handleAwardStats", at = @At("TAIL"))
     private void holzkopf$stats(ClientboundAwardStatsPacket packet, CallbackInfo ci) {
-        GameStatistics.received((ClientPacketListener) (Object) this);
+        GameStatistics.received((ClientPacketListener) (Object) this, packet);
     }
 }

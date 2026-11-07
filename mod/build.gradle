@@ -1,7 +1,7 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version '1.17.21'
 }
-version = '0.4.0'
+version = '0.4.1'
 group = 'ch.clmausel'
 base { archivesName = 'swisscraft-farming-tracker-26.2' }
 repositories { mavenCentral(); maven { url 'https://maven.fabricmc.net/' } }

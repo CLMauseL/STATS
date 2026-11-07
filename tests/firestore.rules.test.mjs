@@ -78,4 +78,12 @@ test('bounded vanilla counters accepted, malformed counters denied on create and
   const withoutTime={...full};delete withoutTime.gameStatsAt;await assertFails(setDoc(ref,withoutTime));
   await assertFails(setDoc(doc(db(),'daily','wrong'),full));
 });
-
+test('legacy singleplayer uploads denied, bounded all-stat snapshot accepted',async()=>{
+  const local=sha('singleplayer');
+  await assertFails(setDoc(doc(db(),'daily',`alice_${sha(local+'_'+date)}`),{...data(),server:local}));
+  const gameStats=Object.fromEntries(['deaths','foodEaten','cakeSlices','mobKills','playerKills','breeding','jumps','walkCm','sprintCm','swimCm','fishCaught','trades'].map(k=>[k,0]));
+  const full={...data(),gameStats,gameStatsAt:Date.now(),vanillaStatsJson:'{"minecraft:crafted/minecraft:oak_planks":100}'};
+  const ref=doc(db(),'daily',id());await assertSucceeds(setDoc(ref,full));
+  await assertFails(setDoc(ref,{...full,vanillaStatsJson:'x'.repeat(524289)}));
+  await assertFails(setDoc(ref,{...full,vanillaStatsJson:{}}));
+});

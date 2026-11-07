@@ -3,6 +3,12 @@ package ch.clmausel.farmingtracker;
 /** No game launch required. Executed by Gradle check. */
 public final class AccountingTest {
     public static void main(String[] args) {
+        if (TrackingScope.multiplayer(true, false) || TrackingScope.multiplayer(true, true)
+            || TrackingScope.multiplayer(false, false) || !TrackingScope.multiplayer(false, true))
+            throw new AssertionError("track only a remote multiplayer connection, never an integrated world");
+        if (TrackingScope.uploadServer("singleplayer") || TrackingScope.uploadServer("")
+            || TrackingScope.uploadServer(null) || !TrackingScope.uploadServer("server.example:25565"))
+            throw new AssertionError("do not retry old singleplayer files");
         check(Accounting.includingIdle(0, 0, 299_999), 299_999, 0);
         check(Accounting.includingIdle(0, 0, 300_000), 0, 300_000);
         check(Accounting.includingIdle(60_000, 10_000, 600_000), 60_000, 610_000);
