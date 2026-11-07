@@ -70,6 +70,7 @@ async function connect(user) {
         try {
           const d = item.data();
           rows.push(window.statsCloud.validate({...d, blocks: JSON.parse(d.blocksJson),
+            vanillaStats: d.vanillaStatsJson ? JSON.parse(d.vanillaStatsJson) : null,
             inventoryGains: JSON.parse(d.inventoryGainsJson)}));
         } catch { /* Ignore corrupt client payloads, never render raw HTML. */ }
       }

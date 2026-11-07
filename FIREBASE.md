@@ -1,5 +1,17 @@
 # Holzkopf: Live-Teamdaten
 
+## Neu in 0.4.1: nur Multiplayer, alle bereitgestellten Statistiken
+
+Tracking ist ausschließlich bei einer externen Multiplayer-Verbindung aktiv. Singleplayer und der eigene integrierte LAN-Host werden nicht aufgezeichnet; auf einem fremden LAN-Server verbundene Spieler zählen als Multiplayer. Ein Wechsel in Singleplayer beendet die bisherige Multiplayer-Aufzeichnung sauber. In Singleplayer werden keine Statistik-Anfragen gesendet. Alte lokale Singleplayer-Dateien werden nicht hochgeladen. Die bekannte Singleplayer-Serverkennung wird zusätzlich in Firestore-Schreibregeln abgelehnt und aus allen Dashboard-Berechnungen, Importen und CSV-Berichten gefiltert. Bereits vorhandene Daten werden dadurch nicht gelöscht.
+
+Der Tab **Alle Statistiken** zeigt sämtliche vom Server über die Vanilla-Statistikpakete übertragenen Zähler: allgemeine Aktionen sowie Statistiken pro Block, Item und Entity, einschließlich Abbau, Herstellung, Nutzung, zerbrochene Werkzeuge, Aufsammeln, Wegwerfen, Kills und Todesursachen-Entity. Er bietet Suche, Kategorie-/Spielerfilter und Seiten mit 100 Einträgen. Gleiche Statistik wird pro Spieler/Server nur aus dem neuesten Snapshot genommen und über unterschiedliche Server summiert. Die Tabellen verwenden die Minecraft-IDs, damit auch neue Items und modifizierte Registrierungen ohne Namensliste darstellbar bleiben.
+
+Strecken mit `_one_cm` werden in Blöcke umgerechnet, andere Rohzähler bleiben ausdrücklich Minecraft-Zähler (z. B. Ticks oder Schadens-Untereinheiten, nicht pauschal Ereignisse). Es wird nur erfasst, was der Server tatsächlich als Statistik liefert. Keine Chattexte, kontinuierlichen Koordinaten oder fremden Spielerstatistiken werden damit ausgelesen. Jeder Spieler muss seine eigene Mod verbinden. Ohne Mod getätigte Aktionen können beim nächsten Statistikabruf im Server-Gesamtstand enthalten sein.
+
+Die vollständige Snapshot-JSON ist auf 512 KiB begrenzt; übergroße Snapshots werden nicht hochgeladen, die festen Übersichtszähler weiterhin schon. Das Dashboard validiert IDs und ganzzahlige Zähler und verarbeitet höchstens 10.000 Statistikschlüssel pro Snapshot. Wie Ressourcen-JSON ist diese JSON für Firestore-Regeln inhaltlich undurchsichtig; sie dient nur zur Anzeige, niemals zur Autorisierung oder automatischen Auszahlung.
+
+Zum Aktualisieren alte Tracker-JAR durch **0.4.1** ersetzen, Verbindungsdatei behalten und Minecraft neu starten. Ein Praxischeck im laufenden Minecraft bleibt erforderlich.
+
 ## Neu in Mod 0.4.0: Minecraft-Zähler und Tabs
 
 Die Tabs Übersicht, Ranglisten, Essen, Kampf & Tode, Bewegung und Team/Anmeldung trennen die Bereiche. Die Mod fordert vanilla Minecraft-Statistiken nach dem Beitritt und danach alle 30 Sekunden an. Ein Mixin liest die vom Server übertragenen Zähler erst nach Verarbeitung durch Minecraft. Tode, Nahrung, Kuchenstücke, Mobs/Spieler besiegt, gezüchtete Tiere, Sprünge, Lauf-/Sprint-/Schwimmstrecke, Fische und Handel werden so als Gesamtstände erfasst.

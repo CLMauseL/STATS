@@ -55,7 +55,8 @@ public final class FarmingTrackerClient implements ClientModInitializer {
     public void onInitializeClient() {
         new CloudSync(OUT).start();
         ClientPlayerBlockBreakEvents.AFTER.register((world, player, pos, state) -> {
-            if (player == null) return;
+            Minecraft client = Minecraft.getInstance();
+            if (player == null || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) return;
             String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
             lifetime.broken(id);
             if (active == null || paused) return;
@@ -67,11 +68,14 @@ public final class FarmingTrackerClient implements ClientModInitializer {
 
     private void tick(Minecraft client) {
         GameStatistics.tick(client);
-        if (client.player == null) {
+        if (client.player == null || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)) {
             lifetime.leave();
             if (active != null) { saveSession(false); active = null; }
             lastTickNs = -1;
             lastInventory.clear();
+            while (startStop.consumeClick()) { }
+            while (pause.consumeClick()) { }
+            while (export.consumeClick()) { }
             return;
         }
         while (startStop.consumeClick()) {
@@ -251,6 +255,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
             if (gameStats != null) {
                 day.gameStats = gameStats;
                 day.gameStatsAt = GameStatistics.sampledAt();
+                day.vanillaStats = GameStatistics.vanillaSnapshot();
             }
             previousNs = now;
             x = nx; y = ny; z = nz; yaw = newYaw; pitch = newPitch;
@@ -323,6 +328,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         Integer deaths = null, breeding = null;
         // Cumulative vanilla server totals. Keep separate from day-only counters.
         Map<String, Long> gameStats;
+        Map<String, Long> vanillaStats;
         long gameStatsAt;
         transient Path file;
         transient long saveTick;

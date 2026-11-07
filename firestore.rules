@@ -32,10 +32,16 @@ service cloud.firestore {
         || (validGameStats(d.gameStats) && d.gameStatsAt is int && d.gameStatsAt > 0
           && d.gameStatsAt <= request.time.toMillis() + 300000);
     }
+    function optionalVanillaStats(d) {
+      // Opaque, bounded snapshot; dashboard validates every namespace/key/value.
+      return !('vanillaStatsJson' in d) || (('gameStats' in d)
+        && d.vanillaStatsJson is string && d.vanillaStatsJson.size() <= 524288);
+    }
     function validDaily(d, id) {
       return d.keys().hasAll(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt'])
-        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt','gameStats','gameStatsAt'])
+        && d.keys().hasOnly(['schema','type','ownerUid','player','date','server','onlineMs','workMs','afkMs','blocksJson','inventoryGainsJson','updatedAt','gameStats','gameStatsAt','vanillaStatsJson'])
         && optionalGameStats(d)
+        && optionalVanillaStats(d)
         && d.schema == 2 && d.type == 'daily'
         && d.ownerUid is string && d.ownerUid.size() <= 128 && uidUnchanged(d)
         && id == d.ownerUid + '_' + hashing.sha256(d.server + '_' + d.date).toHexString().lower()
@@ -43,6 +49,8 @@ service cloud.firestore {
         && d.player == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.player
         && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && d.server is string && d.server.matches('^[a-f0-9]{64}$')
+        // Deny the legacy singleplayer bucket, including uploads from older mods.
+        && d.server != '2f14fd475d21eb62822a22c8d346530a17ebc9ccb8e20dff1e2abf1d5deb7823'
         && d.onlineMs is int && d.onlineMs >= 0 && d.onlineMs <= 90000000
         && d.workMs is int && d.workMs >= 0
         && d.afkMs is int && d.afkMs >= 0 && d.workMs + d.afkMs == d.onlineMs

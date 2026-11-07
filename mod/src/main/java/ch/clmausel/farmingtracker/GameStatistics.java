@@ -6,6 +6,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.stats.Stats;
+import net.minecraft.stats.Stat;
+import net.minecraft.network.protocol.game.ClientboundAwardStatsPacket;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -15,12 +17,14 @@ public final class GameStatistics {
     private static long nextRequest, sampledAt;
     private static boolean requested;
     private static Map<String, Long> latest;
+    private static final Map<String, Long> vanilla = new TreeMap<>();
     private GameStatistics() {}
 
     static void tick(Minecraft client) {
-        var current = client.player == null ? null : client.getConnection();
+        var current = client.player == null || !TrackingScope.multiplayer(client.hasSingleplayerServer(), client.getCurrentServer() != null)
+            ? null : client.getConnection();
         if (current != connection) {
-            connection = current; latest = null; sampledAt = 0; requested = false;
+            connection = current; latest = null; sampledAt = 0; requested = false; vanilla.clear();
             nextRequest = System.nanoTime() + 1_000_000_000L;
         }
         if (current != null && System.nanoTime() >= nextRequest) {
@@ -31,9 +35,12 @@ public final class GameStatistics {
     }
 
     // Called at TAIL, after the vanilla handler has merged the packet into the player's stats.
-    public static void received(ClientPacketListener source) {
+    public static void received(ClientPacketListener source, ClientboundAwardStatsPacket packet) {
         var client = Minecraft.getInstance();
         if (source != connection || !requested || client.player == null) return;
+        for (var entry : packet.stats().object2IntEntrySet()) {
+            vanilla.put(statKey(entry.getKey()), (long) Math.max(0, entry.getIntValue()));
+        }
         var counter = client.player.getStats();
         Map<String, Long> values = new TreeMap<>();
         values.put("deaths", (long) counter.getValue(Stats.CUSTOM, Stats.DEATHS));
@@ -56,4 +63,8 @@ public final class GameStatistics {
     }
     static Map<String, Long> snapshot() { return latest == null ? null : new TreeMap<>(latest); }
     static long sampledAt() { return sampledAt; }
+    static Map<String, Long> vanillaSnapshot() { return latest == null ? null : new TreeMap<>(vanilla); }
+    private static <T> String statKey(Stat<T> stat) {
+        return BuiltInRegistries.STAT_TYPE.getKey(stat.getType()) + "/" + stat.getType().getRegistry().getKey(stat.getValue());
+    }
 }

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {STAT_KEYS,validGameStats,playerTotals,rankPlayers,foodTotal,blocksTravelled} from '../team-web/stats-model.js';
+import {STAT_KEYS,validGameStats,playerTotals,rankPlayers,foodTotal,blocksTravelled,validVanillaStats,vanillaRows} from '../team-web/stats-model.js';
 const stats=changes=>({...Object.fromEntries(STAT_KEYS.map(k=>[k,0])),...changes});
 const row=(player,server,at,changes)=>({player,server,gameStatsAt:at,gameStats:stats(changes)});
 test('repeated daily snapshots never multiply cumulative deaths or meals',()=>{
@@ -27,4 +27,17 @@ test('ranking sorts numerically and supports different leaderboard metrics',()=>
  const p=playerTotals([row('Alice','one',100,{deaths:9,jumps:500}),row('Bob','one',100,{deaths:12,jumps:100})]);
  assert.deepEqual(rankPlayers(p,s=>s.deaths).map(p=>p.player),['Bob','Alice']);
  assert.deepEqual(rankPlayers(p,s=>s.jumps).map(p=>p.player),['Alice','Bob']);
+});
+test('legacy local and cloud singleplayer snapshots never enter rankings',()=>{
+ const rows=[row('Local','singleplayer',100,{deaths:99}),row('Cloud','2f14fd475d21eb62822a22c8d346530a17ebc9ccb8e20dff1e2abf1d5deb7823',100,{deaths:100}),row('Remote','remote',100,{deaths:2})];
+ assert.deepEqual(playerTotals(rows).map(p=>p.player),['Remote']);
+});
+test('all vanilla stats deduplicate per server and exclude singleplayer',()=>{
+ const sample=(server,at,value)=>({player:'Alice',server,gameStatsAt:at,vanillaStats:{'minecraft:crafted/minecraft:oak_planks':value}});
+ const values=vanillaRows([sample('remote',1,100),sample('remote',2,120),sample('remote2',1,30),sample('singleplayer',3,9999)]);
+ assert.equal(values.length,1);assert.equal(values[0].value,150);
+});
+test('vanilla snapshot rejects malicious keys and noninteger/negative counters',()=>{
+ assert.deepEqual(validVanillaStats({'<script>':10,'minecraft:mined/minecraft:stone':12,'minecraft:custom/minecraft:jump':-1,'minecraft:used/minecraft:bread':'30'}),{'minecraft:mined/minecraft:stone':12});
+ assert.equal(validVanillaStats([]),null);
 });

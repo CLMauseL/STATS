@@ -64,6 +64,7 @@ final class CloudSync {
                         if (sha256(content).equals(uploaded.get(file.toString()))) continue;
                         JsonObject d = JsonParser.parseString(content).getAsJsonObject();
                         if (!player.equals(d.get("player").getAsString())) continue;
+                        if (!TrackingScope.uploadServer(d.get("server").getAsString())) continue;
                         String server = sha256(d.get("server").getAsString());
                         String date = d.get("date").getAsString();
                         String id = uid + "_" + sha256(server + "_" + date);
@@ -87,6 +88,13 @@ final class CloudSync {
                             map.add("fields", statsFields); stats.add("mapValue", map); fields.add("gameStats", stats);
                             JsonObject at = new JsonObject(); at.addProperty("integerValue", d.get("gameStatsAt").getAsString());
                             fields.add("gameStatsAt", at);
+                            if (d.has("vanillaStats") && !d.get("vanillaStats").isJsonNull()) {
+                                String encoded = JSON.toJson(d.get("vanillaStats"));
+                                if (encoded.length() <= 524288) {
+                                    JsonObject raw = new JsonObject(); raw.addProperty("stringValue", encoded);
+                                    fields.add("vanillaStatsJson", raw);
+                                }
+                            }
                         }
                         JsonObject update = new JsonObject(); update.addProperty("name", name); update.add("fields", fields);
                         JsonObject transform = new JsonObject(); transform.addProperty("fieldPath", "updatedAt"); transform.addProperty("setToServerValue", "REQUEST_TIME");
