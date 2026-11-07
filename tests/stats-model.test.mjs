@@ -77,3 +77,12 @@ test('Minecraft statistics use native distance, damage and tick time units',asyn
  assert.deepEqual(minecraftDisplay('minecraft:custom/minecraft:play_time',1728000),{value:1,unit:'Tage'});
  assert.deepEqual(minecraftDisplay('minecraft:used/minecraft:bread',120),{value:120,unit:'Anzahl'});
 });
+
+test('every statistic has a numeric ranking, shared ranks and latest server totals',async()=>{
+ const {statisticRanking}=await import('../team-web/stats-model.js');
+ const r=(player,at,value,server='remote')=>({player,server,gameStatsAt:at,vanillaStats:{'minecraft:custom/minecraft:jump':value}});
+ const ranks=statisticRanking([r('Alice',1,10),r('Alice',2,20),r('Bob',2,20),r('Cara',2,5),r('Local',3,999,'singleplayer')],'minecraft:custom/minecraft:jump');
+ assert.deepEqual(ranks.map(e=>[e.player,e.value,e.rank]),[['Alice',20,1],['Bob',20,1],['Cara',5,3]]);
+ assert.equal(ranks.filter(e=>e.player==='Cara')[0].rank,3);
+ assert.deepEqual(statisticRanking([r('Alice',1,10)],'minecraft:custom/minecraft:deaths'),[]);
+});

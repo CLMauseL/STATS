@@ -112,3 +112,9 @@ export function minecraftDisplay(stat, value) {
  }
  return {value,unit:'Anzahl'};
 }
+
+export function statisticRanking(rows, stat) {
+ const entries=vanillaRows(rows).filter(e=>e.stat===stat).sort((a,b)=>b.value-a.value||a.player.localeCompare(b.player,'de'));
+ let previous,rank=0;
+ return entries.map((entry,i)=>{if(entry.value!==previous){rank=i+1;previous=entry.value}return {...entry,rank}});
+}

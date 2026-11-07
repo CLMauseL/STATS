@@ -1,5 +1,5 @@
-import {minecraftNames} from './minecraft-names.js?v=mc-statistics';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay} from './stats-model.js?v=mc-statistics';
+import {minecraftNames} from './minecraft-names.js?v=stat-rankings';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking} from './stats-model.js?v=stat-rankings';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
@@ -21,7 +21,7 @@ function renderAllStats(){
     allSort=node('select');allSort.setAttribute('aria-label','Statistiken sortieren');for(const [value,label] of [['value','Höchster Wert zuerst'],['name','Nach Statistik / ID']]){const o=node('option',label);o.value=value;allSort.append(o)}
     allSort.value=allState.sort;
     allSort.onchange=()=>{allState.sort=allSort.value;allState.page=0;renderAllStats()};
-    allToolbar.append(allSearch,allGroup,allPlayer,allSort);root.append(allToolbar);
+    const playerLabel=node('label','Spieler auswählen: ');playerLabel.append(allPlayer);allToolbar.append(allSearch,allGroup,playerLabel,allSort);root.append(allToolbar);
     allCount=node('p',undefined,'note');allTable=node('div',undefined,'scroll');root.append(allCount,allTable);
     const pager=node('div',undefined,'nav');allPrev=node('button','← Zurück','button alt');allNext=node('button','Weiter →','button alt');pager.append(allPrev,allNext);root.append(pager);
     allSearch.oninput=()=>{allState.search=allSearch.value;allState.page=0;renderAllStats()};
@@ -116,6 +116,38 @@ function renderBlocks(){
  filtered.sort((a,b)=>b.value-a.value||a.stat.localeCompare(b.stat)||a.player.localeCompare(b.player)).forEach((e,i)=>{const r=node('tr');for(const v of ['#'+(i+1),e.stat.split('/')[1],e.player,format(e.value)])r.append(node('td',v));body.append(r)});t.append(body);const scroll=node('div',undefined,'scroll');scroll.append(t);root.append(scroll);
 }
 
+
+const rankingState={stat:'minecraft:custom/minecraft:deaths',player:'*',search:''};
+function renderStatisticRanking(root){
+ root.append(node('h3','Rangliste für jede Statistik'));
+ root.append(node('p','Statistik auswählen und alle Spieler vergleichen. Einzelne Spieler lassen sich mit ihrem Rang im gesamten Team anzeigen. Fehlende Werte bleiben unbekannt.'));
+ const toolbar=node('div',undefined,'nav'),search=node('input');search.type='search';search.placeholder='Statistik suchen …';search.setAttribute('aria-label','Ranglisten-Statistik suchen');search.value=rankingState.search;
+ const stats=node('select');stats.setAttribute('aria-label','Statistik für Rangliste auswählen');
+ const person=node('select');person.setAttribute('aria-label','Rangliste nach Spieler filtern');
+ const statLabel=node('label','Statistik: ');statLabel.append(stats);const playerLabel=node('label','Spieler: ');playerLabel.append(person);toolbar.append(search,statLabel,playerLabel);root.append(toolbar);
+ const all=vanillaRows(window.statsCloud.getRows());
+ for(const [id,label] of [['*','Alle Spieler'],...[...new Set(window.statsCloud.getRows().map(r=>r.player))].sort().map(p=>[p,p])]){const o=node('option',label);o.value=id;person.append(o)}
+ person.value=[...person.options].some(o=>o.value===rankingState.player)?rankingState.player:'*';rankingState.player=person.value;
+ const count=node('p',undefined,'note'),results=node('div',undefined,'scroll');root.append(count,results);
+ const draw=()=>{
+  const stat=rankingState.stat,ranked=statisticRanking(window.statsCloud.getRows(),stat);
+  const filtered=ranked.filter(e=>rankingState.player==='*'||e.player===rankingState.player);
+  count.textContent=window.statsCloud.sourceLabel()+' · '+ranked.length+' Spieler mit diesem Zähler · Rang im gesamten Team';
+  const t=node('table'),head=node('thead'),h=node('tr');for(const v of ['Rang','Spieler',stats.selectedOptions[0]?.textContent||'Statistik','Einheit'])h.append(node('th',v));head.append(h);t.append(head);const body=node('tbody');
+  for(const e of filtered){const display=minecraftDisplay(e.stat,e.value),r=node('tr');for(const v of ['#'+e.rank,e.player,format(display.value),display.unit])r.append(node('td',v));body.append(r)}
+  if(rankingState.player!=='*'&&!filtered.length){const r=node('tr');for(const v of ['–',rankingState.player,'Noch nicht übertragen','–'])r.append(node('td',v));body.append(r)}
+  t.append(body);results.replaceChildren(t);if(!ranked.length)results.append(node('p','Noch keine Werte für diese Statistik vorhanden.','empty'));
+ };
+ const fill=()=>{
+  const q=rankingState.search.trim().toLowerCase();
+  const ids=[...new Set(all.map(e=>e.stat))].filter(id=>(id+' '+statName(id)+' '+(labels[id.split('/')[0]]||'')).toLowerCase().includes(q)).sort((a,b)=>statName(a).localeCompare(statName(b))||a.localeCompare(b));
+  stats.replaceChildren();for(const id of ids){const o=node('option',(labels[id.split('/')[0]]||id.split('/')[0])+' · '+statName(id));o.value=id;stats.append(o)}
+  if(ids.includes(rankingState.stat))stats.value=rankingState.stat;else rankingState.stat=ids[0]||'';
+  draw();
+ };
+ search.oninput=()=>{rankingState.search=search.value;fill()};stats.onchange=()=>{rankingState.stat=stats.value;draw()};person.onchange=()=>{rankingState.player=person.value;draw()};fill();
+}
+
 function renderCategories(){
   renderAllStats();
   renderBlocks();
@@ -133,7 +165,9 @@ function renderCategories(){
     select.onchange=()=>{sortSelection[id]=Number(select.value);draw()};draw();
     if(!known.length)target.append(node('p','Noch keine Minecraft-Zähler vorhanden. Mod 0.4.3 installieren, dem Server beitreten und die erste Synchronisierung abwarten. Alte Daten bleiben „–“, nicht null Ereignisse.','empty'));
   }
-  const target=$('stats-rankings');target.replaceChildren(node('h2','Die Holzkopfarmy-Rekorde'));
+  const target=$('stats-rankings');target.replaceChildren(node('h2','Alle Ranglisten'));
+  renderStatisticRanking(target);
+  target.append(node('h3','Die Holzkopfarmy-Rekorde'));
   const grid=node('div',undefined,'record-grid');
   const awards=[['Meiste Tode',s=>s.deaths,'Tode'],['Größter Hunger',foodTotal,'Lebensmittel-Nutzungen / Kuchenstücke'],['Meiste Sprünge',s=>s.jumps,'Sprünge'],['Längste Laufstrecke',s=>blocksTravelled(s.walkCm+s.sprintCm),'Blöcke'],['Meiste Mobs besiegt',s=>s.mobKills,'Mobs'],['Meiste Tiere gezüchtet',s=>s.breeding,'Züchtungen'],['Meiste Fische gefangen',s=>s.fishCaught,'Fische'],['Meiste Handelsgeschäfte',s=>s.trades,'Handelsgeschäfte']];
   for(const [label,metric,unit] of awards){
