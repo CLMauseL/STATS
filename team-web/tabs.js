@@ -1,4 +1,4 @@
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows} from './stats-model.js';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows} from './stats-model.js?v=0.4.1';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
