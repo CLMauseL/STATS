@@ -5,7 +5,7 @@ export function parsePairingLink(value) {
 }
 export async function completePairing(pairing,config,request=fetch){
  if(!pairing||config.player!==pairing.player)throw new Error('player-mismatch');
- const response=await request(`http://127.0.0.1:${pairing.port}/pair`,{method:'POST',mode:'cors',credentials:'omit',referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json','X-Holzkopf-Pairing':pairing.nonce},body:JSON.stringify(config),signal:AbortSignal.timeout(10000)});
+ const response=await request(`http://127.0.0.1:${pairing.port}/pair`,{method:'POST',targetAddressSpace:'loopback',mode:'cors',credentials:'omit',referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json','X-Holzkopf-Pairing':pairing.nonce},body:JSON.stringify(config),signal:AbortSignal.timeout(60000)});
  if(!response.ok)throw new Error(response.status===410?'expired':'connection-rejected');
  const result=await response.json();if(result.ok!==true)throw new Error('connection-rejected');
 }
