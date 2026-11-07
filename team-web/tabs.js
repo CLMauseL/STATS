@@ -1,11 +1,11 @@
-import {minecraftNames} from './minecraft-names.js?v=stat-design';
-import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking} from './stats-model.js?v=stat-design';
+import {minecraftNames} from './minecraft-names.js?v=stat-subcategories';
+import {playerTotals,rankPlayers,foodTotal,blocksTravelled,vanillaRows,historicalFoodTotals,minecraftDisplay,statisticRanking} from './stats-model.js?v=stat-subcategories';
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('de-CH',{maximumFractionDigits:2});
 const sortSelection={};
 const allState={search:'',group:'*',player:'*',page:0,sort:'name',section:'general'};
 const labels={'holzkopf:placed':'Blöcke gesetzt','minecraft:custom':'Allgemein','minecraft:mined':'Blöcke abgebaut','minecraft:crafted':'Items hergestellt','minecraft:used':'Items benutzt','minecraft:broken':'Werkzeuge zerbrochen','minecraft:picked_up':'Items aufgesammelt','minecraft:dropped':'Items weggeworfen','minecraft:killed':'Mobs besiegt','minecraft:killed_by':'Getötet durch'};
-let sectionButtons;
+let sectionButtons,subcategoryButtons;
 const statSection=type=>type==='minecraft:custom'?'general':['minecraft:killed','minecraft:killed_by'].includes(type)?'mobs':'items';
 function statName(stat){const [type,id]=stat.split('/'),name=id.replace(':','.');const keys=type==='minecraft:custom'?['stat.'+name]:statSection(type)==='mobs'?['entity.'+name]:['item.'+name,'block.'+name];return keys.map(k=>minecraftNames[k]).find(Boolean)||id}
 let allToolbar,allSearch,allGroup,allPlayer,allTable,allCount,allPrev,allNext,allSort;
@@ -14,7 +14,7 @@ function renderAllStats(){
   if(!allToolbar){
     root.append(node('h2','Alle Minecraft-Statistiken'));
     root.append(node('p','Direkt aus der Minecraft-Statistik des Multiplayer-Servers: Allgemein, Items und Mobs, einschließlich vorhandener Historie. Bezeichnungen wie im englischen Minecraft. Fehlende Einträge wurden noch nicht übertragen. Eigene Platzierungszählungen stehen separat unter Blöcke.'));
-    sectionButtons=node('div',undefined,'stat-sections');for(const [id,label] of [['general','Allgemein (General)'],['items','Items'],['mobs','Mobs']]){const b=node('button',label,'button alt');b.dataset.section=id;b.onclick=()=>{allState.section=id;allState.group='*';allState.page=0;renderAllStats()};sectionButtons.append(b)}root.append(sectionButtons);
+    sectionButtons=node('div',undefined,'stat-sections');for(const [id,label] of [['general','Allgemein (General)'],['items','Items'],['mobs','Mobs']]){const b=node('button',label,'button alt');b.dataset.section=id;b.onclick=()=>{allState.section=id;allState.group='*';allState.page=0;renderAllStats()};sectionButtons.append(b)}root.append(sectionButtons);subcategoryButtons=node('div',undefined,'stat-subcategories');subcategoryButtons.setAttribute('aria-label','Unterkategorien');root.append(subcategoryButtons);
     allToolbar=node('div',undefined,'stat-filters');allSearch=node('input');allSearch.type='search';allSearch.placeholder='Suchen, z. B. diamond, jump, damage …';allSearch.setAttribute('aria-label','Statistiken durchsuchen');
     allGroup=node('select');allGroup.setAttribute('aria-label','Statistikkategorie');
     allPlayer=node('select');allPlayer.setAttribute('aria-label','Statistiken nach Spieler filtern');
@@ -32,9 +32,14 @@ function renderAllStats(){
   for(const b of sectionButtons.children)b.setAttribute('aria-pressed',String(b.dataset.section===allState.section));
   const entries=vanillaRows(window.statsCloud.getRows()).filter(e=>e.stat.startsWith('minecraft:')&&statSection(e.stat.split('/')[0])===allState.section);
   const fill=(select,values,selected,first)=>{select.replaceChildren();for(const [value,label] of [['*',first],...values]){const o=node('option',label);o.value=value;select.append(o)}select.value=values.some(([v])=>v===selected)?selected:'*';};
-  fill(allGroup,[...new Set(entries.map(x=>x.stat.split('/')[0]))].sort().map(k=>[k,labels[k]||k]),allState.group,'Alle Kategorien');
+  const types=allState.section==='items'?['minecraft:used','minecraft:mined','minecraft:crafted','minecraft:broken','minecraft:picked_up','minecraft:dropped']:allState.section==='mobs'?['minecraft:killed','minecraft:killed_by']:['minecraft:custom'];
+  fill(allGroup,types.map(k=>[k,labels[k]||k]),allState.group,'Alle Kategorien');
   fill(allPlayer,[...new Set(entries.map(x=>x.player))].sort().map(p=>[p,p]),allState.player,'Alle Spieler');
   allState.group=allGroup.value;allState.player=allPlayer.value;
+  const subcategories=allState.section==='items'?[['*','Alle Items'],['minecraft:used','Benutzt'],['minecraft:mined','Abgebaut'],['minecraft:crafted','Hergestellt'],['minecraft:broken','Zerbrochen'],['minecraft:picked_up','Aufgesammelt'],['minecraft:dropped','Weggeworfen']]:allState.section==='mobs'?[['*','Alle Mobs'],['minecraft:killed','Besiegt'],['minecraft:killed_by','Getötet durch']]:[];
+  subcategoryButtons.replaceChildren();subcategoryButtons.hidden=!subcategories.length;allGroup.hidden=!!subcategories.length;
+  for(const [id,label] of subcategories){const b=node('button',label,'subcategory-button');b.setAttribute('aria-pressed',String(allState.group===id));b.onclick=()=>{allState.group=id;allState.page=0;renderAllStats()};subcategoryButtons.append(b)}
+  
   const search=allState.search.trim().toLowerCase();
   const filtered=entries.filter(x=>(allState.group==='*'||x.stat.split('/')[0]===allState.group)
     &&(allState.player==='*'||x.player===allState.player)
@@ -57,7 +62,7 @@ function renderAllStats(){
    const compare=node('button','Rangliste ansehen →','button alt');compare.onclick=()=>{rankingState.stat=stat;rankingState.search='';rankingState.player=allState.player;renderCategories();activate(buttons.find(b=>b.dataset.tab==='rankings'))};card.append(compare);grid.append(card);
   }
   const details=node('details',undefined,'stat-details');details.append(node('summary','Werte als Detailtabelle anzeigen'),table);allTable.replaceChildren(grid,details);
-  if(!cards.length)allTable.prepend(node('p','Keine passenden Statistiken. Suche oder Filter anpassen.','empty'));
+  if(!cards.length)allTable.prepend(node('p','Für diese Unterkategorie und Auswahl wurden noch keine Statistiken übertragen.','empty'));
   allPrev.disabled=allState.page===0;allNext.disabled=(allState.page+1)*size>=cards.length;
   allCount.textContent=entries.length?`${window.statsCloud.sourceLabel()} · ${cards.length} Statistiken · Seite ${allState.page+1} / ${Math.max(1,Math.ceil(cards.length/size))}`:'Noch keine vollständigen Minecraft-Statistiken übertragen. Mod 0.4.3 installieren und einem Multiplayer-Server beitreten.';
 }
