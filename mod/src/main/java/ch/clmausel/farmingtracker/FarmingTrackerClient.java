@@ -105,18 +105,24 @@ public final class FarmingTrackerClient implements ClientModInitializer {
                     active.totalInventoryGains += added;
                 }
             }
-            if (++hudTicks >= 20) {
-                hudTicks = 0;
-                if (showHud) {
-                    double hours = Math.max(1, active.activeMs) / 3_600_000.0;
-                    String s = String.format("§a⛏ %d Blöcke (%.1f/h) §7| §b+%d Items (%.1f/h) §7| §f%s",
-                        active.totalBlocks, active.totalBlocks / hours,
-                          active.totalInventoryGains, active.totalInventoryGains / hours, clock(active.activeMs));
-                          client.player.sendOverlayMessage(Component.literal(s));
-
-                }
-            }
             if (++saveTicks >= 200) { saveTicks = 0; saveSession(false); }
+        }
+        // F7 HUD is independent of F8 farming sessions; show lifetime stats at all times.
+        if (++hudTicks >= 20) {
+            hudTicks = 0;
+            if (showHud) {
+                String info;
+                if (active != null) {
+                    double hours = Math.max(1, active.activeMs) / 3_600_000.0;
+                    info = String.format("§a⛏ %d Blöcke (%.1f/h) §7| §b+%d Items (%.1f/h) §7| §f%s%s",
+                        active.totalBlocks, active.totalBlocks / hours,
+                        active.totalInventoryGains, active.totalInventoryGains / hours,
+                        clock(active.activeMs), paused ? " §ePAUSE" : "");
+                } else {
+                    info = lifetime.hudSummary();
+                }
+                client.player.sendOverlayMessage(Component.literal(info));
+            }
         }
         lastInventory = currentInventory;
         lastTickNs = now;
@@ -195,6 +201,15 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         private double x, y, z, yaw, pitch;
         private boolean initialized = false, blockActivity = false;
         private Map<String, Integer> previousInventory = new HashMap<>();
+
+        String hudSummary() {
+            if (day == null) return "§aSwissCraft STATS §7| §fNoch keine Tagesdaten";
+            long activeMs = day.workMs + (pendingIdleMs < LIMIT ? pendingIdleMs : 0);
+            long afkMs = day.afkMs + (pendingIdleMs >= LIMIT ? pendingIdleMs : 0);
+            double diamonds = activeMs * 16.0 / 3_600_000.0;
+            return String.format("§aSwissCraft §7| §fOnline %s §7| §bArbeit %s §7| §eAFK %s §7| §b%.1f 💎",
+                clock(day.onlineMs), clock(activeMs), clock(afkMs), diamonds);
+        }
 
         void broken(String id) {
             if (day != null) day.blocks.merge(id, 1L, Long::sum);
