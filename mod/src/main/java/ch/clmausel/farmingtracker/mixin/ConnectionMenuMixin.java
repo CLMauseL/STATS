@@ -19,8 +19,9 @@ abstract class ConnectionMenuMixin extends Screen {
     protected ConnectionMenuMixin(Component title){super(title);}
     @Inject(method="init",at=@At("TAIL"))
     private void holzkopf$connection(CallbackInfo ci){
-        addRenderableWidget(Button.builder(Component.literal("Holzkopfarmy verbinden"),b->PairingBridge.open()).bounds(8,8,190,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Verbindungsstatus"),b->{var client=Minecraft.getInstance();client.setScreenAndShow(new AlertScreen(()->client.setScreenAndShow(this),Component.literal("Holzkopfarmy · Verbindungsstatus"),Component.literal(CloudStatus.message)));}).bounds(8,32,Math.max(190,Math.min(width-16,360)),20).build());
+        int controlWidth=Math.min(190,(width-24)/2);
+        addRenderableWidget(Button.builder(Component.literal("Holzkopfarmy verbinden"),b->PairingBridge.open()).bounds(8,8,controlWidth,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Verbindungsstatus"),b->{var client=Minecraft.getInstance();client.setScreenAndShow(new AlertScreen(()->client.setScreenAndShow(this),Component.literal("Holzkopfarmy · Verbindungsstatus"),Component.literal(CloudStatus.message)));}).bounds(16+controlWidth,8,controlWidth,20).build());
     }
 }
 
