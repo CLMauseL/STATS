@@ -1,5 +1,15 @@
 # Holzkopf: Live-Teamdaten
 
+## Neu in Mod 0.4.0: Minecraft-Zähler und Tabs
+
+Die Tabs Übersicht, Ranglisten, Essen, Kampf & Tode, Bewegung und Team/Anmeldung trennen die Bereiche. Die Mod fordert vanilla Minecraft-Statistiken nach dem Beitritt und danach alle 30 Sekunden an. Ein Mixin liest die vom Server übertragenen Zähler erst nach Verarbeitung durch Minecraft. Tode, Nahrung, Kuchenstücke, Mobs/Spieler besiegt, gezüchtete Tiere, Sprünge, Lauf-/Sprint-/Schwimmstrecke, Fische und Handel werden so als Gesamtstände erfasst.
+
+Diese Gesamtstände können die bisherige Geschichte auf dem jeweiligen Server enthalten und werden **nicht** der aktuellen Berichtswoche zugeschlagen. Das Dashboard wählt pro Spieler/Server nur den neuesten Snapshot und summiert unterschiedliche Server; mehrere Tagesdateien zählen dieselben Gesamtstände nicht mehrfach. Gelaufene Blöcke = Minecraft-Zentimeter / 100. Nahrung = ITEM_USED für Items mit FOOD-Komponente; Kuchenstücke werden separat erfasst und für die Essensrangliste addiert. Serverdefinierte Spezialaktionen ohne Vanilla-Statistik sind nicht enthalten.
+
+Fehlende Zähler bleiben „–“. Alte Mod-Versionen und Dateien funktionieren weiter, liefern diese neuen Werte aber nicht. Wenn der Server keine Statistikpakete sendet, bleiben die Werte unbekannt. Serverseitige Statistik-Resets werden als neuer Gesamtstand übernommen. Bei identischen Serveradressen werden ersetzte Welten nicht als unabhängige Serverhistorien zusammengerechnet. Ein echter Minecraft-Praxistest des Mixins bleibt erforderlich.
+
+Zum Aktualisieren Minecraft schließen, die alte Tracker-JAR durch Version 0.4.0 ersetzen und wieder starten. `cloud-session.json` und vorhandene Tagesdateien behalten. Die optionalen `gameStats`-Felder werden durch Firestore strikt nach Schlüsseln, Integer-Typ und Wertebereich geprüft. Gesamtstände bleiben clientseitig übermittelt und sind keine Auszahlungsgarantie.
+
 Projekt `holzkopf-stats-clmausel`, Datenbank `live`: Enterprise Native, **Zürich / europe-west6**, Echtzeit aktiviert. Dashboard: https://clmausel.github.io/STATS/
 
 ## Spieler verbinden

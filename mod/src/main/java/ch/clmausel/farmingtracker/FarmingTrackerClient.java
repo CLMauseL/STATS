@@ -66,6 +66,7 @@ public final class FarmingTrackerClient implements ClientModInitializer {
     }
 
     private void tick(Minecraft client) {
+        GameStatistics.tick(client);
         if (client.player == null) {
             lifetime.leave();
             if (active != null) { saveSession(false); active = null; }
@@ -246,6 +247,11 @@ public final class FarmingTrackerClient implements ClientModInitializer {
                 }
             }
             previousInventory = new HashMap<>(inventory);
+            Map<String, Long> gameStats = GameStatistics.snapshot();
+            if (gameStats != null) {
+                day.gameStats = gameStats;
+                day.gameStatsAt = GameStatistics.sampledAt();
+            }
             previousNs = now;
             x = nx; y = ny; z = nz; yaw = newYaw; pitch = newPitch;
             initialized = true; blockActivity = false;
@@ -315,6 +321,9 @@ public final class FarmingTrackerClient implements ClientModInitializer {
         Map<String, Long> blocks = new TreeMap<>(), inventoryGains = new TreeMap<>();
         // Unknown until tested with authoritative or synced Minecraft stat counters.
         Integer deaths = null, breeding = null;
+        // Cumulative vanilla server totals. Keep separate from day-only counters.
+        Map<String, Long> gameStats;
+        long gameStatsAt;
         transient Path file;
         transient long saveTick;
     }
