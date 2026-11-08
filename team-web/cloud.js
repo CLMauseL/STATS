@@ -1,6 +1,6 @@
 import {parsePairingLink,completePairing} from './pairing-client.js?v=easy-login-050';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js';
-import { getAuth, setPersistence, browserSessionPersistence, createUserWithEmailAndPassword,
+import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut,
   onAuthStateChanged, reload, EmailAuthProvider, reauthenticateWithCredential } from 'https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js';
 import { getFirestore, doc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js';
@@ -12,7 +12,7 @@ let paired=false;
 if(pairing)el('bridgeStatus').textContent='Minecraft läuft als '+pairing.player+'. Mit dem passenden Teamkonto anmelden und diese Mod verbinden.';
 const auth = getAuth(initializeApp(firebaseConfig));
 const db = getFirestore(auth.app, databaseId);
-await setPersistence(auth, browserSessionPersistence);
+await setPersistence(auth, browserLocalPersistence).catch(() => {});
 let stopMember = () => {}, stopDays = () => {}, generation = 0, membership = null;
 const status = text => {
   el('cloudStatus').textContent = text;
@@ -62,7 +62,7 @@ el('cloudMode').onchange = () => window.statsCloud.mode(el('cloudMode').checked)
 async function connect(user) {
   const current = ++generation; clear();
   el('cloudUid').textContent = user ? `Konto-ID für die Teamfreigabe: ${user.uid}` : '';
-  if (!user) { if(window.statsCloud.hasOffline()){el('cloudMode').checked=false;window.statsCloud.mode(false)} status('Nicht angemeldet. Unter „Anmeldung & Live-Daten“ anmelden, um deine vorhandenen Minecraft-Statistiken zu laden.'); return; }
+  if (!user) { if(window.statsCloud.hasOffline()){el('cloudMode').checked=false;window.statsCloud.mode(false)} status('Spielstatistiken sind öffentlich. Für Live-Teamdaten und die Mod-Verbindung anmelden.'); return; }
   if (!user.emailVerified) { status('Bitte zuerst deine E-Mail-Adresse bestätigen.'); return; }
   // Keep membership live: revoked accounts immediately lose the displayed data.
   stopMember = onSnapshot(doc(db, 'members', user.uid), snap => {
