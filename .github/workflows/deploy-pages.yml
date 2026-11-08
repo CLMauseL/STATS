@@ -40,10 +40,13 @@ jobs:
         with:
           workload_identity_provider: projects/31135085718/locations/global/workloadIdentityPools/holzkopf-pages/providers/github-pages
           create_credentials_file: false
+          service_account: holzkopf-pages-reader@holzkopf-stats-clmausel.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_lifetime: 600s
       - name: Refresh public gameplay statistics
 
         env:
-          STATS_FIRESTORE_ACCESS_TOKEN: ${{ steps.stats-auth.outputs.auth_token }}
+          STATS_FIRESTORE_ACCESS_TOKEN: ${{ steps.stats-auth.outputs.access_token }}
         run: node scripts/export-public-stats.mjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
